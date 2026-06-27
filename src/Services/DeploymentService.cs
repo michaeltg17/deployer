@@ -8,9 +8,12 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
-public sealed class DeploymentService(ILogger<DeploymentService> logger, IOptions<DeployerSettings> settings, IDockerClient dockerClient, KeePassEnvService keepassEnvService)
+public sealed class DeploymentService(
+    ILogger<DeploymentService> logger,
+    IOptions<DeployerSettings> settings,
+    IDockerClient dockerClient, KeePassEnvService keepassEnvService)
 {
-    private readonly DeployerSettings _settings = settings.Value;
+    private readonly DeployerSettings deployerSettings = settings.Value;
 
     public async Task Deploy(DeployRequest request)
     {
@@ -23,7 +26,7 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
         if (!File.Exists(composeFile))
             throw new InvalidDeployRequestException($"Docker compose file not found for project '{request.Project}': {composeFile}");
 
-        var image = $"{_settings.ImageRepo}:{request.Tag}";
+        var image = $"{deployerSettings.ImageRepo}:{request.Tag}";
         var tempDir = Path.Combine(Path.GetTempPath(), $"deploy-{request.Project}-{request.Environment}-{Guid.NewGuid():N}");
 
         try
@@ -39,12 +42,12 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
             logger.LogInformation("Pulling image: {Image}", image);
             var authConfig = new AuthConfig
             {
-                Username = _settings.GhcrUser,
-                Password = _settings.GhcrToken,
+                Username = deployerSettings.GhcrUser,
+                Password = deployerSettings.GhcrToken,
                 ServerAddress = "ghcr.io"
             };
             await dockerClient.Images.CreateImageAsync(
-                new ImagesCreateParameters { FromImage = _settings.ImageRepo, Tag = request.Tag },
+                new ImagesCreateParameters { FromImage = deployerSettings.ImageRepo, Tag = request.Tag },
                 authConfig,
                 new Progress<JSONMessage>());
             logger.LogInformation("Image pulled successfully");

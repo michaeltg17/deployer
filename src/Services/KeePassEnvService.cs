@@ -7,9 +7,9 @@ namespace Api.Services;
 
 public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOptions<DeployerSettings> settings)
 {
-    private readonly string _dbPath = settings.Value.KeePassDbPath!;
-    private readonly string _password = settings.Value.KeePassDbPassword!;
-    private readonly string _projectsGroup = "Projects";
+    private readonly string dbPath = settings.Value.KeePassDbPath!;
+    private readonly string password = settings.Value.KeePassDbPassword!;
+    private readonly string projectsGroup = "Projects";
 
     public async Task WriteEnvFiles(string targetDir, string project, string environment)
     {
@@ -51,7 +51,7 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
         var psi = new ProcessStartInfo
         {
             FileName = "keepassxc-cli",
-            Arguments = $"--password \"{_password}\" attachment-export --stdout \"{_dbPath}\" \"{_projectsGroup}/{project}\" \"{attachmentName}\"",
+            Arguments = $"--password \"{password}\" attachment-export --stdout \"{dbPath}\" \"{projectsGroup}/{project}\" \"{attachmentName}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -69,7 +69,7 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
         if (process.ExitCode != 0)
         {
             var stderr = await stderrTask;
-            logger.LogWarning("keepassxc-cli exit={ExitCode} for {Group}/{Entry}/{Attachment}: {Stderr}", process.ExitCode, _projectsGroup, project, attachmentName, stderr);
+            logger.LogWarning("keepassxc-cli exit={ExitCode} for {Group}/{Entry}/{Attachment}: {Stderr}", process.ExitCode, projectsGroup, project, attachmentName, stderr);
             return string.Empty;
         }
 
