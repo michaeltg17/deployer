@@ -11,11 +11,11 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
     private readonly string _password = settings.Value.KeePassDbPassword!;
     private readonly string _projectsGroup = "Projects";
 
-    public async Task WriteEnvFilesAsync(string targetDir, string project, string environment)
+    public async Task WriteEnvFiles(string targetDir, string project, string environment)
     {
         var sb = new StringBuilder();
 
-        var common = await ExtractAttachmentAsync(project, ".env");
+        var common = await ExtractAttachment(project, ".env");
         if (!string.IsNullOrEmpty(common))
         {
             sb.Append(common);
@@ -23,7 +23,7 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
                 sb.AppendLine();
         }
 
-        var envSpecific = await ExtractAttachmentAsync(project, $".env.{environment}");
+        var envSpecific = await ExtractAttachment(project, $".env.{environment}");
         if (!string.IsNullOrEmpty(envSpecific))
             sb.Append(envSpecific);
 
@@ -32,7 +32,7 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
         logger.LogInformation("Wrote .env to {Dir} for {Project}/{Environment}", targetDir, project, environment);
     }
 
-    public async Task CleanupAsync(string targetDir)
+    public async Task Cleanup(string targetDir)
     {
         try
         {
@@ -46,7 +46,7 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
         }
     }
 
-    private async Task<string> ExtractAttachmentAsync(string project, string attachmentName)
+    private async Task<string> ExtractAttachment(string project, string attachmentName)
     {
         var psi = new ProcessStartInfo
         {

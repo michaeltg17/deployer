@@ -10,7 +10,7 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
 {
     private readonly DeployerSettings _settings = settings.Value;
 
-    public async Task<(bool Success, string Message)> DeployAsync(string project, string environment, string tag)
+    public async Task<(bool Success, string Message)> Deploy(string project, string environment, string tag)
     {
         var projectDir = Path.Combine("/projects", project);
         var composeFile = Path.Combine(projectDir, "docker-compose.yml");
@@ -29,7 +29,7 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
             File.Copy(composeFile, Path.Combine(tempDir, "docker-compose.yml"));
 
             logger.LogInformation("Extracting .env for {Project}/{Environment} from KeePass", project, environment);
-            await keepassEnvService.WriteEnvFilesAsync(tempDir, project, environment);
+            await keepassEnvService.WriteEnvFiles(tempDir, project, environment);
 
             logger.LogInformation("Pulling image: {Image}", image);
             var authConfig = new AuthConfig
@@ -46,7 +46,7 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
 
             var tempComposeFile = Path.Combine(tempDir, "docker-compose.yml");
             logger.LogInformation("Running docker compose in {TempDir}", tempDir);
-            var composeResult = await RunComposeUpAsync(tempComposeFile, tag);
+            var composeResult = await RunComposeUp(tempComposeFile, tag);
             if (composeResult.ExitCode != 0)
             {
                 logger.LogError("Compose up failed: {Stderr}", composeResult.Stderr);
@@ -62,7 +62,7 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
         }
         finally
         {
-            await keepassEnvService.CleanupAsync(tempDir);
+            await keepassEnvService.Cleanup(tempDir);
             try
             {
                 Directory.Delete(tempDir, true);
@@ -74,12 +74,12 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
         }
     }
 
-    private async Task<(int ExitCode, string Stdout, string Stderr)> RunComposeUpAsync(string composeFile, string tag)
+    private async Task<(int ExitCode, string Stdout, string Stderr)> RunComposeUp(string composeFile, string tag)
     {
         var psi = new ProcessStartInfo
         {
             FileName = "docker",
-            Arguments = $"compose -f {composeFile} up -d --force-recreate",
+            Arguments = $"compose -f \"{composeFile}\" up -d --force-recreate",
             WorkingDirectory = Path.GetDirectoryName(composeFile),
             RedirectStandardOutput = true,
             RedirectStandardError = true,

@@ -26,6 +26,6 @@ builder.Logging.AddSimpleConsole();
 
 var app = builder.Build();
 
-DeployEndpoint.MapDeployEndpoint(app);
+DeployEndpoint.Map(app);
 
 app.Run();
