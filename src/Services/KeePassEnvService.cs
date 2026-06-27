@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Text;
-using Microsoft.Extensions.Options;
+using Api.Logging;
 using Api.Models;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -29,7 +30,7 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
 
         var envPath = Path.Combine(targetDir, ".env");
         await File.WriteAllTextAsync(envPath, sb.ToString());
-        logger.LogInformation("Wrote .env to {Dir} for {Project}/{Environment}", targetDir, project, environment);
+        logger.LogEnvWritten(targetDir, project, environment);
     }
 
     public async Task Cleanup(string targetDir)
@@ -42,7 +43,7 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to cleanup .env from {Path}", targetDir);
+            logger.LogEnvCleanupFailed(targetDir, ex);
         }
     }
 
@@ -69,7 +70,7 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
         if (process.ExitCode != 0)
         {
             var stderr = await stderrTask;
-            logger.LogWarning("keepassxc-cli exit={ExitCode} for {Group}/{Entry}/{Attachment}: {Stderr}", process.ExitCode, projectsGroup, project, attachmentName, stderr);
+            logger.LogKeePassCliFailed(process.ExitCode, projectsGroup, project, attachmentName, stderr);
             return string.Empty;
         }
 

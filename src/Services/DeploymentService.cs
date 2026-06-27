@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Api.Exceptions;
+using Api.Logging;
 using Api.Models;
 using Api.Validation;
 using Docker.DotNet;
@@ -31,15 +32,15 @@ public sealed class DeploymentService(
 
         try
         {
-            logger.LogInformation("Deploying {Image} to {Project}/{Environment}", image, request.Project, request.Environment);
+            logger.LogDeploying(image, request.Project!, request.Environment!);
 
             Directory.CreateDirectory(tempDir);
             File.Copy(composeFile, Path.Combine(tempDir, "docker-compose.yml"));
 
-            logger.LogInformation("Extracting .env for {Project}/{Environment} from KeePass", request.Project, request.Environment);
+            logger.LogExtractingEnv(request.Project!, request.Environment!);
             await keepassEnvService.WriteEnvFiles(tempDir, request.Project!, request.Environment!);
 
-            logger.LogInformation("Pulling image: {Image}", image);
+            logger.LogPullingImage(image);
             var authConfig = new AuthConfig
             {
                 Username = deployerSettings.GhcrUser,
@@ -50,18 +51,18 @@ public sealed class DeploymentService(
                 new ImagesCreateParameters { FromImage = deployerSettings.ImageRepo, Tag = request.Tag },
                 authConfig,
                 new Progress<JSONMessage>());
-            logger.LogInformation("Image pulled successfully");
+            logger.LogImagePulled();
 
             var tempComposeFile = Path.Combine(tempDir, "docker-compose.yml");
-            logger.LogInformation("Running docker compose in {TempDir}", tempDir);
+            logger.LogRunningCompose(tempDir);
             var composeResult = await RunComposeUp(tempComposeFile, request.Tag!);
             if (composeResult.ExitCode != 0)
             {
-                logger.LogError("Compose up failed: {Stderr}", composeResult.Stderr);
+                logger.LogComposeFailed(composeResult.Stderr);
                 throw new DeployerException($"Failed to start services: {composeResult.Stderr}");
             }
 
-            logger.LogInformation("Successfully deployed tag {Tag} to {Project}/{Environment}", request.Tag, request.Project, request.Environment);
+            logger.LogDeploySuccess(request.Tag!, request.Project!, request.Environment!);
         }
         finally
         {
@@ -72,7 +73,7 @@ public sealed class DeploymentService(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to remove temp dir {TempDir}", tempDir);
+                logger.LogTempDirCleanupFailed(tempDir, ex);
             }
         }
     }
