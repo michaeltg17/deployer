@@ -1,4 +1,5 @@
 using Api.Endpoints;
+using Api.Extensions;
 using Api.Models;
 using Api.Services;
 using Api.Validation;
@@ -26,6 +27,7 @@ builder.Logging.AddSimpleConsole();
 
 var app = builder.Build();
 
+app.UseCustomExceptionHandler();
 DeployEndpoint.Map(app);
 
 app.Run();

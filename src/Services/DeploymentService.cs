@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using Api.Exceptions;
+using Api.Models;
+using Api.Validation;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Microsoft.Extensions.Options;
-using Api.Models;
 
 namespace Api.Services;
 
@@ -10,13 +12,16 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
 {
     private readonly DeployerSettings _settings = settings.Value;
 
-    public async Task<(bool Success, string Message)> Deploy(string project, string environment, string tag)
+    public async Task Deploy(DeployRequest request)
     {
+        if (DeployRequestValidator.Validate(request) is { } validationEx)
+            throw validationEx;
+
         var projectDir = Path.Combine("/projects", project);
         var composeFile = Path.Combine(projectDir, "docker-compose.yml");
 
         if (!File.Exists(composeFile))
-            return (false, $"Docker compose file not found: {composeFile}");
+            throw new InvalidDeployRequestException(request, $"Docker compose file not found for project '{project}': {composeFile}");
 
         var image = $"{_settings.ImageRepo}:{tag}";
         var tempDir = Path.Combine(Path.GetTempPath(), $"deploy-{project}-{environment}-{Guid.NewGuid():N}");
@@ -50,15 +55,10 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
             if (composeResult.ExitCode != 0)
             {
                 logger.LogError("Compose up failed: {Stderr}", composeResult.Stderr);
-                return (false, $"Failed to start services: {composeResult.Stderr}");
+                throw new DeployerException($"Failed to start services: {composeResult.Stderr}");
             }
 
             logger.LogInformation("Successfully deployed tag {Tag} to {Project}/{Environment}", tag, project, environment);
-            return (true, $"Successfully deployed tag {tag} to {project}/{environment}");
-        }
-        catch (Exception ex)
-        {
-            return (false, $"Deployment failed: {ex.Message}");
         }
         finally
         {
