@@ -5,9 +5,9 @@ COPY Api/ Api/
 WORKDIR /src/Api
 RUN dotnet publish -c Release -o /app --no-restore
 
-# Stage 2: Runtime (alpine + docker-cli for deployments)
+# Stage 2: Runtime (alpine + docker-cli + keepassxc-cli for deployments)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
-RUN apk add --no-cache docker-cli
+RUN apk add --no-cache docker-cli keepassxc
 WORKDIR /app
 COPY --from=build /app .
 

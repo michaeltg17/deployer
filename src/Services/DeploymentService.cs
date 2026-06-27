@@ -6,66 +6,81 @@ using Api.Models;
 
 namespace Api.Services;
 
-public sealed class DeploymentService(ILogger<DeploymentService> logger, IOptions<DeployerSettings> settings, IDockerClient dockerClient)
+public sealed class DeploymentService(ILogger<DeploymentService> logger, IOptions<DeployerSettings> settings, IDockerClient dockerClient, KeePassEnvService keepassEnvService)
 {
     private readonly DeployerSettings _settings = settings.Value;
 
-    public async Task<(bool Success, string Message)> DeployAsync(string environment, string tag)
+    public async Task<(bool Success, string Message)> DeployAsync(string project, string environment, string tag)
     {
-        var composeFile = Path.Combine(_settings.DeployBaseDir, "docker-compose.yml");
+        var projectDir = Path.Combine("/projects", project);
+        var composeFile = Path.Combine(projectDir, "docker-compose.yml");
+
         if (!File.Exists(composeFile))
             return (false, $"Docker compose file not found: {composeFile}");
 
         var image = $"{_settings.ImageRepo}:{tag}";
-        var serviceName = $"{environment}";
-
-        logger.LogInformation("Deploying {Image} to {Environment}", image, environment);
-
-        var authConfig = new AuthConfig
-        {
-            Username = _settings.GhcrUser,
-            Password = _settings.GhcrToken,
-            ServerAddress = "ghcr.io"
-        };
+        var tempDir = Path.Combine(Path.GetTempPath(), $"deploy-{project}-{environment}-{Guid.NewGuid():N}");
 
         try
         {
+            logger.LogInformation("Deploying {Image} to {Project}/{Environment}", image, project, environment);
+
+            Directory.CreateDirectory(tempDir);
+            File.Copy(composeFile, Path.Combine(tempDir, "docker-compose.yml"));
+
+            logger.LogInformation("Extracting .env for {Project}/{Environment} from KeePass", project, environment);
+            await keepassEnvService.WriteEnvFilesAsync(tempDir, project, environment);
+
             logger.LogInformation("Pulling image: {Image}", image);
+            var authConfig = new AuthConfig
+            {
+                Username = _settings.GhcrUser,
+                Password = _settings.GhcrToken,
+                ServerAddress = "ghcr.io"
+            };
             await dockerClient.Images.CreateImageAsync(
                 new ImagesCreateParameters { FromImage = _settings.ImageRepo, Tag = tag },
                 authConfig,
                 new Progress<JSONMessage>());
             logger.LogInformation("Image pulled successfully");
 
-            logger.LogInformation("Deploying {Service}...", serviceName);
-            var composeResult = await RunComposeUpAsync(composeFile, serviceName, tag);
+            var tempComposeFile = Path.Combine(tempDir, "docker-compose.yml");
+            logger.LogInformation("Running docker compose in {TempDir}", tempDir);
+            var composeResult = await RunComposeUpAsync(tempComposeFile, tag);
             if (composeResult.ExitCode != 0)
             {
-                logger.LogError("Service start failed: {Stderr}", composeResult.Stderr);
-                return (false, $"Failed to start service: {composeResult.Stderr}");
+                logger.LogError("Compose up failed: {Stderr}", composeResult.Stderr);
+                return (false, $"Failed to start services: {composeResult.Stderr}");
             }
-            logger.LogInformation("Service {Service} deployed successfully", serviceName);
 
-            logger.LogInformation("Cleaning up old images...");
-            var pruned = await dockerClient.Images.PruneImagesAsync(new ImagesPruneParameters());
-            logger.LogInformation("Pruned {Count} unused images, reclaimed {Space} bytes",
-                pruned.ImagesDeleted?.Count ?? 0, pruned.SpaceReclaimed);
-
-            logger.LogInformation("Successfully deployed tag {Tag} to {Environment}", tag, environment);
-            return (true, $"Successfully deployed tag {tag} to {environment}");
+            logger.LogInformation("Successfully deployed tag {Tag} to {Project}/{Environment}", tag, project, environment);
+            return (true, $"Successfully deployed tag {tag} to {project}/{environment}");
         }
         catch (Exception ex)
         {
             return (false, $"Deployment failed: {ex.Message}");
         }
+        finally
+        {
+            await keepassEnvService.CleanupAsync(tempDir);
+            try
+            {
+                Directory.Delete(tempDir, true);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to remove temp dir {TempDir}", tempDir);
+            }
+        }
     }
 
-    private async Task<(int ExitCode, string Stdout, string Stderr)> RunComposeUpAsync(string composeFile, string serviceName, string tag)
+    private async Task<(int ExitCode, string Stdout, string Stderr)> RunComposeUpAsync(string composeFile, string tag)
     {
         var psi = new ProcessStartInfo
         {
             FileName = "docker",
-            Arguments = $"compose -f {composeFile} up -d --force-recreate {serviceName}",
+            Arguments = $"compose -f {composeFile} up -d --force-recreate",
+            WorkingDirectory = Path.GetDirectoryName(composeFile),
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -74,7 +89,7 @@ public sealed class DeploymentService(ILogger<DeploymentService> logger, IOption
         };
 
         using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException($"Failed to start process: docker compose -f {composeFile} up -d --force-recreate {serviceName}");
+            ?? throw new InvalidOperationException($"Failed to start process: docker compose -f {composeFile} up -d --force-recreate");
 
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();

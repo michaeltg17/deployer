@@ -19,6 +19,7 @@ builder.Services.AddSingleton<IDockerClient>(sp =>
     var config = new DockerClientConfiguration();
     return config.CreateClient();
 });
+builder.Services.AddSingleton<KeePassEnvService>();
 builder.Services.AddSingleton<DeploymentService>();
 
 builder.Logging.ClearProviders();

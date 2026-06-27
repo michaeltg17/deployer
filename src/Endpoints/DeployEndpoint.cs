@@ -24,7 +24,6 @@ public static class DeployEndpoint
             ILogger<DeploymentService> logger) =>
         {
             var settings = settingsOption.Value;
-            var environments = settings.Environments!.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             byte[] payload;
             await using (var buffer = new MemoryStream())
@@ -41,16 +40,14 @@ public static class DeployEndpoint
             if (body is null)
                 return Results.Problem("Invalid JSON", statusCode: 400);
 
+            var project = body.Project ?? httpRequest.Query["project"];
             var env = body.Environment ?? httpRequest.Query["environment"];
             var tg = body.Tag ?? httpRequest.Query["tag"];
 
-            if (string.IsNullOrEmpty(env) || string.IsNullOrEmpty(tg))
-                return Results.Problem($"Missing fields. Got environment={env}, tag={tg}", statusCode: 400);
+            if (string.IsNullOrEmpty(project) || string.IsNullOrEmpty(env) || string.IsNullOrEmpty(tg))
+                return Results.Problem($"Missing fields. Got project={project}, environment={env}, tag={tg}", statusCode: 400);
 
-            if (!environments.Contains(env!))
-                return Results.Problem($"Invalid environment: {env}. Must be one of: {string.Join(", ", environments)}", statusCode: 400);
-
-            var (success, message) = await deployService.DeployAsync(env!, tg!);
+            var (success, message) = await deployService.DeployAsync(project!, env!, tg!);
 
             if (!success)
                 logger.LogError("Deployment failed: {Message}", message);

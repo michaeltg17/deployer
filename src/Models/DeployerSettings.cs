@@ -13,9 +13,7 @@ public sealed class DeployerSettings
     [Required]
     public required string ImageRepo { get; set; }
 
-    [Required]
-    public required string[] Environments { get; set; }
+    public string? KeePassDbPath { get; set; }
 
-    [Required]
-    public required string DeployBaseDir { get; set; }
+    public string? KeePassDbPassword { get; set; }
 }

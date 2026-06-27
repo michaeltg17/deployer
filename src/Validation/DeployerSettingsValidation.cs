@@ -14,6 +14,12 @@ public sealed class DeployerSettingsValidation : IValidateOptions<DeployerSettin
                 : ValidateOptionsResult.Fail("GhcrUser is set but GhcrToken is missing");
         }
 
+        if (string.IsNullOrEmpty(options.KeePassDbPath))
+            return ValidateOptionsResult.Fail("KeePassDbPath is required");
+
+        if (string.IsNullOrEmpty(options.KeePassDbPassword))
+            return ValidateOptionsResult.Fail("KeePassDbPassword is required");
+
         return ValidateOptionsResult.Success;
     }
 }
