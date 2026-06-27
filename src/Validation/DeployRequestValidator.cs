@@ -19,7 +19,7 @@ public static class DeployRequestValidator
         if (invalidFields.Count == 0) return null;
 
         var message = $"Invalid deploy request: {string.Join(", ", invalidFields)}";
-        return new InvalidDeployRequestException(request, message);
+        return new InvalidDeployRequestException(message);
     }
 
     private static string ToJsonValue(string? value) =>
