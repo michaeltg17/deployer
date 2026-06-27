@@ -10,9 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddOptions<DeployerSettings>()
     .BindConfiguration("")
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-builder.Services.AddSingleton<IValidateOptions<DeployerSettings>, DeployerSettingsValidation>();
+    .ValidateOnStart()
+    .Services.AddSingleton<IValidateOptions<DeployerSettings>, DeployerSettingsValidator>();
 
 builder.Services.AddSingleton<IDockerClient>(sp =>
 {
