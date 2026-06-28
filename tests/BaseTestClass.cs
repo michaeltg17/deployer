@@ -11,12 +11,12 @@ public class BaseTestClass : WebApplicationFactory<Program>
 {
     public BaseTestClass()
     {
-        Environment.SetEnvironmentVariable("BasicAuthPass", "test-pass");
         Environment.SetEnvironmentVariable("GhcrUser", "test-user");
         Environment.SetEnvironmentVariable("ImageRepo", "ghcr.io/michaeltg17/deployer");
         Environment.SetEnvironmentVariable("DeployBaseDir", "/tmp/test-deploy");
         Environment.SetEnvironmentVariable("GhcrToken", "test-token");
-        Environment.SetEnvironmentVariable("Environments", "dev,qa,prod");
+        Environment.SetEnvironmentVariable("KeePassDbPath", "/tmp/test.kdbx");
+        Environment.SetEnvironmentVariable("KeePassDbPassword", "test-db-pass");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

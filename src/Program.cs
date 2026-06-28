@@ -14,6 +14,7 @@ builder.Services
     .ValidateOnStart()
     .Services.AddSingleton<IValidateOptions<DeployerSettings>, DeployerSettingsValidator>();
 
+builder.Services.AddProblemDetails();
 builder.Services.AddSingleton<IDockerClient>(sp =>
 {
     var config = new DockerClientConfiguration();

@@ -1,5 +1,6 @@
 using Api.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using System.Net;
 
@@ -20,6 +21,7 @@ public static class ExceptionHandlerExtensions
             httpContext.Response.StatusCode = exception switch
             {
                 InvalidDeployRequestException => (int)HttpStatusCode.BadRequest,
+                BadHttpRequestException => (int)HttpStatusCode.BadRequest,
                 _ => (int)HttpStatusCode.InternalServerError,
             };
 

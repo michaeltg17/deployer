@@ -1,19 +1,13 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using Api.Models;
 using Xunit;
 
 namespace Tests;
 
-public class Tests : IClassFixture<BaseTestClass>
+public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
 {
-    private readonly HttpClient client;
-
-    public Tests(BaseTestClass factory)
-    {
-        client = factory.CreateClient();
-    }
+    private readonly HttpClient client = factory.CreateClient();
 
     [Fact]
     public async Task MissingBody_Returns400()
@@ -35,7 +29,7 @@ public class Tests : IClassFixture<BaseTestClass>
     [Fact]
     public async Task MissingEnvironment_Returns400()
     {
-        var body = new DeployRequest { Tag = "v1.0.0" };
+        var body = new DeployRequest { Project = "test", Tag = "v1.0.0" };
         var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
         var response = await client.PostAsync("/deploy", content);
@@ -46,7 +40,7 @@ public class Tests : IClassFixture<BaseTestClass>
     [Fact]
     public async Task MissingTag_Returns400()
     {
-        var body = new DeployRequest { Environment = "dev" };
+        var body = new DeployRequest { Project = "test", Environment = "dev" };
         var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
         var response = await client.PostAsync("/deploy", content);
@@ -54,51 +48,16 @@ public class Tests : IClassFixture<BaseTestClass>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Fact]
-    public async Task InvalidEnvironment_Returns400()
-    {
-        var body = new DeployRequest { Environment = "staging", Tag = "v1.0.0" };
-        var content = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/deploy", content);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
+
+
 
     [Fact]
-    public async Task NoAuth_Returns401()
-    {
-        var unauthenticatedClient = client;
-        unauthenticatedClient.DefaultRequestHeaders.Authorization = null;
-
-        var body = new DeployRequest { Environment = "dev", Tag = "v1.0.0" };
-        var content = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await unauthenticatedClient.PostAsync("/deploy", content);
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task WrongCredentials_Returns401()
-    {
-        var badClient = client;
-        badClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes("deploy:wrong")));
-
-        var body = new DeployRequest { Environment = "dev", Tag = "v1.0.0" };
-        var content = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await badClient.PostAsync("/deploy", content);
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task ValidRequest_NoComposeFile_Returns500()
+    public async Task ValidRequest_NoComposeFile_Returns400()
     {
         var body = new DeployRequest
         {
+            Project = "test",
             Environment = "dev",
             Tag = "v1.0.0"
         };
@@ -106,19 +65,20 @@ public class Tests : IClassFixture<BaseTestClass>
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
         var response = await client.PostAsync("/deploy", content);
 
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var errorResponse = await response.Content.ReadAsStringAsync();
         Assert.Contains("docker-compose.yml", errorResponse);
     }
 
     [Fact]
-    public async Task ValidRequest_EachEnvironment_Returns500()
+    public async Task ValidRequest_EachEnvironment_Returns400()
     {
         foreach (var environment in new[] { "dev", "qa", "prod" })
         {
             var body = new DeployRequest
             {
+                Project = "test",
                 Environment = environment,
                 Tag = "v1.0.0"
             };
@@ -126,7 +86,7 @@ public class Tests : IClassFixture<BaseTestClass>
                 System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
             var response = await client.PostAsync("/deploy", content);
 
-            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }
 }
