@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.env
+*.log
+.github/
+.opencode/

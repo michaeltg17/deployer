@@ -20,7 +20,7 @@ echo "Build successful"
 # Step 3: Tests (self-migrate via TestBase.Migrate in constructors)
 echo ""
 echo "[3/3] Running tests..."
-dotnet test tests/Api.Tests/Api.Tests.csproj --verbosity normal
+dotnet test tests/Tests.csproj --verbosity normal
 echo "Tests passed"
 
 echo ""
