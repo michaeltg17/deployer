@@ -12,7 +12,7 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
     [Fact]
     public async Task MissingBody_Returns400()
     {
-        var response = await client.PostAsync("/deploy", null);
+        var response = await client.PostAsync("/", null);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -20,7 +20,7 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
     [Fact]
     public async Task InvalidBody_Returns400()
     {
-        var response = await client.PostAsync("/deploy",
+        var response = await client.PostAsync("/",
             new StringContent("not-json", Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -32,7 +32,7 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
         var body = new DeployRequest { Project = "test", Tag = "v1.0.0" };
         var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/deploy", content);
+        var response = await client.PostAsync("/", content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -43,14 +43,10 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
         var body = new DeployRequest { Project = "test", Environment = "dev" };
         var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/deploy", content);
+        var response = await client.PostAsync("/", content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
-
-
-
-
 
     [Fact]
     public async Task ValidRequest_NoComposeFile_Returns400()
@@ -63,7 +59,7 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
         };
         var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/deploy", content);
+        var response = await client.PostAsync("/", content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -84,7 +80,7 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
             };
             var content = new StringContent(
                 System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync("/deploy", content);
+            var response = await client.PostAsync("/", content);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
