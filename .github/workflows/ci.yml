@@ -31,8 +31,6 @@ jobs:
           push: false
           load: true
           tags: deployer-ci:latest
-          cache-from: type=gha,scope=deployer-ci
-          cache-to: type=gha,mode=max,scope=deployer-ci
 
       - name: Run CI checks
         run: docker run --rm deployer-ci:latest

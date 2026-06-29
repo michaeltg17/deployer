@@ -14,13 +14,13 @@ echo "Restore successful"
 # Step 2: Build
 echo ""
 echo "[2/3] Building..."
-dotnet build
+dotnet build --no-incremental
 echo "Build successful"
 
 # Step 3: Tests
 echo ""
 echo "[3/3] Running tests..."
-dotnet test tests/Tests.csproj --verbosity normal
+dotnet test tests/Tests.csproj --no-build --verbosity normal
 echo "Tests passed"
 
 echo ""
