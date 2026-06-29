@@ -1,37 +1,47 @@
-using Moq;
 using Docker.DotNet;
 using Docker.DotNet.Models;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace Tests;
 
 public class BaseTestClass : WebApplicationFactory<Program>
 {
-    public BaseTestClass()
-    {
-        Environment.SetEnvironmentVariable("GhcrUser", "test-user");
-        Environment.SetEnvironmentVariable("ImageRepo", "ghcr.io/michaeltg17/deployer");
-        Environment.SetEnvironmentVariable("DeployBaseDir", "/tmp/test-deploy");
-        Environment.SetEnvironmentVariable("GhcrToken", "test-token");
-        Environment.SetEnvironmentVariable("KeePassDbPath", "/tmp/test.kdbx");
-        Environment.SetEnvironmentVariable("KeePassDbPassword", "test-db-pass");
-    }
-
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        base.ConfigureWebHost(builder);
-        builder.ConfigureServices(MockDockerClient);
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            var testSettings = new Dictionary<string, string?>
+            {
+                ["GhcrUser"] = "test-user",
+                ["ImageRepo"] = "ghcr.io/michaeltg17/deployer",
+                ["DeployBaseDir"] = "/tmp/test-deploy",
+                ["GhcrToken"] = "test-token",
+                ["KeePassDbPath"] = "/tmp/test.kdbx",
+                ["KeePassDbPassword"] = "test-db-pass"
+            };
+
+            config.AddInMemoryCollection(testSettings);
+        });
+
+        builder.ConfigureServices(services =>
+        {
+            MockDockerClient(services);
+        });
     }
 
-    static void MockDockerClient(IServiceCollection services)
+    private static void MockDockerClient(IServiceCollection services)
     {
         var mock = new Mock<IDockerClient>();
 
         var imagesMock = new Mock<IImageOperations>();
+
         imagesMock.Setup(x => x.CreateImageAsync(
-            It.Is<ImagesCreateParameters>(p => p.FromImage == "ghcr.io/michaeltg17/deployer"),
+            It.Is<ImagesCreateParameters>(p =>
+                p.FromImage == "ghcr.io/michaeltg17/deployer"),
             It.IsAny<AuthConfig>(),
             It.IsAny<IProgress<JSONMessage>>(),
             It.IsAny<CancellationToken>()))
@@ -46,11 +56,17 @@ public class BaseTestClass : WebApplicationFactory<Program>
                 SpaceReclaimed = 0
             });
 
-        mock.Setup(x => x.Images).Returns(imagesMock.Object);
+        mock.Setup(x => x.Images)
+            .Returns(imagesMock.Object);
 
-        var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IDockerClient));
+        var existing = services.FirstOrDefault(
+            d => d.ServiceType == typeof(IDockerClient));
+
         if (existing != null)
+        {
             services.Remove(existing);
+        }
+
         services.AddSingleton(mock.Object);
     }
 }
