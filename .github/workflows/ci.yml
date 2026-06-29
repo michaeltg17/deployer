@@ -27,7 +27,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          dockerfile: Dockerfile.ci
+          file: Dockerfile.ci
           push: false
           load: true
           tags: deployer-ci:latest
