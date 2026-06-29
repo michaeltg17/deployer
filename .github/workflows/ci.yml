@@ -34,6 +34,9 @@ jobs:
           cache-from: type=gha,scope=deployer-ci
           cache-to: type=gha,mode=max,scope=deployer-ci
 
+      - name: Run CI checks
+        run: docker run --rm deployer-ci:latest
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v6
