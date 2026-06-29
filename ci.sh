@@ -2,7 +2,7 @@
 set -e
 
 echo "========================================="
-echo "  Running CI Pipeline in Docker"
+echo "  Running ci"
 echo "========================================="
 
 # Step 1: Restore
@@ -17,7 +17,7 @@ echo "[2/3] Building..."
 dotnet build
 echo "Build successful"
 
-# Step 3: Tests (self-migrate via TestBase.Migrate in constructors)
+# Step 3: Tests
 echo ""
 echo "[3/3] Running tests..."
 dotnet test tests/Tests.csproj --verbosity normal
@@ -25,5 +25,5 @@ echo "Tests passed"
 
 echo ""
 echo "========================================="
-echo "  All CI checks passed!"
+echo "  All ci checks passed!"
 echo "========================================="

@@ -9,6 +9,7 @@
     <File Path="ci-docker.sh" />
     <File Path="ci-docker-build.sh" />
     <File Path="docker-compose.ci.yml" />
+    <File Path="Dockerfile" />
     <File Path="Dockerfile.ci" />
   </Folder>
   <Project Path="src/Api.csproj" />

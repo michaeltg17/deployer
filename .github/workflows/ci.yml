@@ -34,10 +34,6 @@ jobs:
           cache-from: type=gha,scope=deployer-ci
           cache-to: type=gha,mode=max,scope=deployer-ci
 
-      - name: Run tests
-        run: |
-          docker run --rm deployer-ci dotnet test tests/Tests.csproj -c Release --logger "trx;LogFileName=test-results.trx" -- CollectCoverage=true CollectCoveragePath=/test-results
-
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v6
