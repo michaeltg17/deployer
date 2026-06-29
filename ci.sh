@@ -8,19 +8,19 @@ echo "========================================="
 # Step 1: Restore
 echo ""
 echo "[1/3] Restoring packages..."
-dotnet restore
+dotnet restore Deployer.slnx
 echo "Restore successful"
 
 # Step 2: Build
 echo ""
 echo "[2/3] Building..."
-dotnet build --no-incremental
+dotnet build Deployer.slnx
 echo "Build successful"
 
 # Step 3: Tests
 echo ""
 echo "[3/3] Running tests..."
-dotnet test tests/Tests.csproj --no-build --verbosity normal
+dotnet test Deployer.slnx --no-build --verbosity normal
 echo "Tests passed"
 
 echo ""

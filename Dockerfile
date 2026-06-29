@@ -2,15 +2,18 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Copy solution-level files and source
+# Layer 1: Copy only project files and restore (cached unless deps change)
 COPY Directory.Build.props ./
 COPY Directory.Packages.props ./
-COPY src/ src/
-WORKDIR /src/src
+COPY Deployer.slnx ./
+COPY src/Api.csproj src/
+COPY tests/Tests.csproj tests/
+RUN dotnet restore Deployer.slnx
 
-# Restore and publish
-RUN dotnet restore
-RUN dotnet publish -c Release -o /app
+# Layer 2: Copy full source and publish (invalidated on code change)
+COPY src/ src/
+COPY tests/ tests/
+RUN dotnet publish src/Api.csproj -c Release -o /app
 
 # Stage 2: Runtime (alpine + docker-cli + keepassxc-cli for deployments)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
