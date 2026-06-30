@@ -1,16 +1,6 @@
 services:
-  deployer:
-    image: ghcr.io/michaeltg17/deployer:latest
-    container_name: deployer
-    restart: unless-stopped
-    env_file: .env
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./deployer.kdbx:/deployer.kdbx:ro
-      - ./projects:/projects
-    networks:
-      - nginx-net
-
-networks:
-  nginx-net:
-    external: true
+  app:
+    image: ghcr.io/michaeltg17/deployer:${TAG}
+    container_name: deployer-test-${TAG}
+    labels:
+      - test.deployer.project=test-project

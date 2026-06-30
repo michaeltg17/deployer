@@ -1,104 +1,78 @@
-//using System.Diagnostics;
-//using System.Net;
-//using System.Text;
-//using Api.Models;
-//using Xunit;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using Api.Models;
+using Xunit;
 
-//namespace Tests;
+namespace Tests;
 
-//public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDockerTestClass>
-//{
-//    private readonly HttpClient _client = factory.CreateClient();
+public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDockerTestClass>
+{
+    private readonly HttpClient _client = factory.CreateClient();
 
-//    [Fact]
-//    public async Task ValidRequest_Returns200_AndStartsContainer()
-//    {
-//        var projectName = $"test-docker-{Guid.NewGuid():N}";
-//        var projectDir = Path.Combine(factory.TestProjectsDir, projectName);
-//        Directory.CreateDirectory(projectDir);
+    [Fact]
+    public async Task ValidRequest_Latest_Returns200_AndStartsContainer()
+    {
+        await DeployAndVerify("test-project", "dev", "latest", "ghcr.io/michaeltg17/deployer:latest");
+    }
 
-//        File.WriteAllText(Path.Combine(projectDir, "docker-compose.yml"),
-//            $$"""
-//            services:
-//              app:
-//                image: nginx:$${TAG}
-//                labels:
-//                  - test.deployer.project={{{projectName}}}
-//            """);
+    [Fact]
+    public async Task ValidRequest_CommitTag_Returns200_AndStartsContainer()
+    {
+        await DeployAndVerify("test-project", "dev", "21ec91a", "ghcr.io/michaeltg17/deployer:21ec91a");
+    }
 
-//        try
-//        {
-//            var body = new DeployRequest
-//            {
-//                Project = projectName,
-//                Environment = "dev",
-//                Tag = "latest",
-//            };
-//            var content = new StringContent(
-//                System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-//            var response = await _client.PostAsync("/deploy", content);
+    async Task DeployAndVerify(string project, string environment, string tag, string expectedImage)
+    {
+        var containerName = $"deployer-test-{tag}";
 
-//            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        try
+        {
+            _ = await RunProcess("docker", $"stop {containerName}");
+            _ = await RunProcess("docker", $"rm {containerName}");
+        }
+        catch { }
 
-//            var result = await RunProcess("docker",
-//                $"ps --filter \"label=test.deployer.project={projectName}\" --format '{{{{.Names}}}}'");
-//            Assert.Equal(0, result.ExitCode);
-//            var names = result.Stdout.Trim().Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-//            Assert.NotEmpty(names);
-//        }
-//        finally
-//        {
-//            await CleanupContainers(projectName);
-//            CleanupDirectory(projectDir);
-//        }
-//    }
+        var body = new DeployRequest
+        {
+            Project = project,
+            Environment = environment,
+            Tag = tag,
+        };
+        var content = new StringContent(
+            System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync("/", content);
 
-//    static async Task CleanupContainers(string labelValue)
-//    {
-//        try
-//        {
-//            var listResult = await RunProcess("docker",
-//                $"ps -q --filter \"label=test.deployer.project={labelValue}\"");
-//            if (listResult.ExitCode == 0)
-//            {
-//                var ids = listResult.Stdout.Trim().Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-//                foreach (var id in ids)
-//                {
-//                    _ = await RunProcess("docker", $"stop {id}");
-//                    _ = await RunProcess("docker", $"rm {id}");
-//                }
-//            }
-//        }
-//        catch { }
-//    }
+        var responseBody = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"{response.StatusCode}: {responseBody}");
 
-//    static void CleanupDirectory(string directory)
-//    {
-//        try { Directory.Delete(directory, true); }
-//        catch { }
-//    }
+        var inspectResult = await RunProcess("docker", $"inspect --format '{{{{.Config.Image}}}}' {containerName}");
+        Assert.Equal(0, inspectResult.ExitCode);
+        Assert.Equal(expectedImage, inspectResult.Stdout.Trim().Trim('"', '\''));
+    }
 
-//    static async Task<ProcessResult> RunProcess(string fileName, string arguments)
-//    {
-//        using var process = Process.Start(new ProcessStartInfo
-//        {
-//            FileName = fileName,
-//            Arguments = arguments,
-//            RedirectStandardOutput = true,
-//            RedirectStandardError = true,
-//            UseShellExecute = false,
-//            CreateNoWindow = true,
-//        }) ?? throw new InvalidOperationException($"Failed to start process: {fileName} {arguments}");
+    static async Task<ProcessResult> RunProcess(string fileName, string arguments)
+    {
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        }) ?? throw new InvalidOperationException($"Failed to start process: {fileName} {arguments}");
 
-//        process.WaitForExit(60_000);
-//        var stdout = await process.StandardOutput.ReadToEndAsync();
-//        var stderr = await process.StandardError.ReadToEndAsync();
+        process.WaitForExit(60_000);
+        var stdout = await process.StandardOutput.ReadToEndAsync();
+        var stderr = await process.StandardError.ReadToEndAsync();
 
-//        return new ProcessResult
-//        {
-//            ExitCode = process.ExitCode,
-//            Stdout = stdout,
-//            Stderr = stderr
-//        };
-//    }
-//}
+        return new ProcessResult
+        {
+            ExitCode = process.ExitCode,
+            Stdout = stdout,
+            Stderr = stderr
+        };
+    }
+}

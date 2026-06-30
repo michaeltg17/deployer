@@ -13,12 +13,13 @@ public class RealDockerTestClass : WebApplicationFactory<Program>
 
     public RealDockerTestClass()
     {
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.ImageRepo), "nginx");
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPath), "/tmp/test.kdbx");
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPassword), "test-db-pass");
+        var testRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(RealDockerTestClass).Assembly.Location)!, "..", "..", ".."));
+        var testKdbxPath = Path.Combine(testRoot, "test.kdbx");
+        TestProjectsDir = Path.Combine(testRoot, "projects");
 
-        TestProjectsDir = Path.GetFullPath(Path.Combine(Path.GetTempPath(), $"test-projects-{Guid.NewGuid():N}"));
-        Directory.CreateDirectory(TestProjectsDir);
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.ImageRepo), "ghcr.io/michaeltg17/deployer");
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPath), testKdbxPath);
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPassword), "test-db-pass");
         Environment.SetEnvironmentVariable(nameof(DeployerSettings.ProjectsDir), TestProjectsDir);
     }
 
@@ -31,6 +32,12 @@ public class RealDockerTestClass : WebApplicationFactory<Program>
             if (existing != null)
                 services.Remove(existing);
             services.AddSingleton<IProcessRunner>(sp => new DelegatingProcessRunner(new ProcessRunner()));
+
+            // Override DeployerSettings via post-configuration
+            services.PostConfigure<DeployerSettings>(opts =>
+            {
+                opts.ProjectsDir = TestProjectsDir;
+            });
         });
     }
 }
