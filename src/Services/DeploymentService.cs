@@ -40,15 +40,9 @@ public sealed class DeploymentService(
             await keepassEnvService.WriteEnvFiles(tempDir, request.Project!, request.Environment!);
 
             logger.LogPullingImage(image);
-            var authConfig = new AuthConfig
-            {
-                Username = deployerSettings.GhcrUser,
-                Password = deployerSettings.GhcrToken,
-                ServerAddress = "ghcr.io"
-            };
             await dockerClient.Images.CreateImageAsync(
                 new ImagesCreateParameters { FromImage = deployerSettings.ImageRepo, Tag = request.Tag },
-                authConfig,
+                null,
                 new Progress<JSONMessage>());
             logger.LogImagePulled();
 

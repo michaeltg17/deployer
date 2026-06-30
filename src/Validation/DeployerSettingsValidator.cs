@@ -9,12 +9,6 @@ public sealed class DeployerSettingsValidator : IValidateOptions<DeployerSetting
     {
         var errors = new List<string>();
 
-        if (string.IsNullOrWhiteSpace(options.GhcrUser))
-            errors.Add($"The '{nameof(options.GhcrUser)}' setting is required");
-
-        if (string.IsNullOrWhiteSpace(options.GhcrToken))
-            errors.Add($"The '{nameof(options.GhcrToken)}' setting is required");
-
         if (string.IsNullOrWhiteSpace(options.ImageRepo))
             errors.Add($"The '{nameof(options.ImageRepo)}' setting is required");
 

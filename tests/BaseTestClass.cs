@@ -15,9 +15,7 @@ public class BaseTestClass : WebApplicationFactory<Program>
 
     public BaseTestClass()
     {
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.GhcrUser), "test-user");
         Environment.SetEnvironmentVariable(nameof(DeployerSettings.ImageRepo), "ghcr.io/michaeltg17/deployer");
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.GhcrToken), "test-token");
         Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPath), "/tmp/test.kdbx");
         Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPassword), "test-db-pass");
 

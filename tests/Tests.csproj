@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Docker.DotNet" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
@@ -16,5 +16,4 @@
   <ItemGroup>
     <ProjectReference Include="..\src\Api.csproj" />
   </ItemGroup>
-
 </Project>
