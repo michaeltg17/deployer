@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using Api.Models;
 using Xunit;

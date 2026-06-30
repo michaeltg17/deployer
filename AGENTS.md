@@ -86,6 +86,42 @@ docker build -t deployer . && docker run --rm -it -v /var/run/docker.sock:/var/r
 dotnet test tests/Tests.csproj
 ```
 
+### Test Files
+
+```
+└── tests/
+    ├── Tests.csproj                # xunit, Moq, Docker.DotNet, Mvc.Testing
+    ├── BaseTestClass.cs            # WebApplicationFactory, mock Docker client & IProcessRunner
+    ├── Tests.cs                    # 7 mocked tests: validation, missing compose, success path
+    ├── RealDockerTestClass.cs      # WebApplicationFactory for real Docker tests
+    ├── RealDockerTests.cs          # 2 real Docker tests: deploys actual containers
+    ├── DelegatingProcessRunner.cs  # IProcessRunner wrapper: blocks keepassxc-cli, delegates
+    ├── test.kdbx                   # KeePassXC 2 binary test database
+    └── projects/
+        └── test-project/
+            └── docker-compose.yml  # Uses ghcr.io/michaeltg17/deployer:${TAG}
+```
+
+### Mocked Tests (Tests.cs)
+
+7 tests using `BaseTestClass` with Moq — never call real Docker or KeePass. Validates request parsing, missing fields, missing compose file, and the success path (compose file created on disk, all deps mocked).
+
+### Real Docker Tests (RealDockerTests.cs)
+
+2 tests using `RealDockerTestClass` — deploy real containers against Docker daemon:
+
+| Test | Description |
+|------|-------------|
+| `ValidRequest_Latest_Returns200_AndStartsContainer` | Deploys `test-project` with `tag: "latest"`, verifies 200 + `docker inspect` confirms `ghcr.io/michaeltg17/deployer:latest` |
+| `ValidRequest_CommitTag_Returns200_AndStartsContainer` | Deploys `test-project` with `tag: "21ec91a"`, verifies 200 + correct image tag |
+
+`DelegatingProcessRunner` wraps `ProcessRunner`: blocks `keepassxc-cli` (not installed on test host), delegates `docker` commands to real `ProcessRunner`. `KeePassEnvService` tolerates failed CLI calls (empty `.env` is acceptable for tests).
+
+### KeePass CLI Mocking
+
+- **BaseTestClass**: full Moq mock — every `keepassxc-cli` and `docker` call returns `ExitCode = 0`
+- **RealDockerTests**: `DelegatingProcessRunner` short-circuits `keepassxc-cli` with `ExitCode = 1`, delegates `docker` to real process
+
 ## Coding Conventions
 
 - **No `Async` suffix** — don't name methods `RunAsync`, do `Run`. The `async` modifier on the method body is sufficient.
