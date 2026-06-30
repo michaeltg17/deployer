@@ -85,4 +85,31 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }
+
+    [Fact]
+    public async Task ValidRequest_Returns200()
+    {
+        var projectName = "test-ok";
+        var projectDir = Path.Combine(factory.TestProjectsDir, projectName);
+        Directory.CreateDirectory(projectDir);
+        File.WriteAllText(Path.Combine(projectDir, "docker-compose.yml"), "services:\n  app:\n    image: test:test\n");
+        try
+        {
+            var body = new DeployRequest
+            {
+                Project = projectName,
+                Environment = "dev",
+                Tag = "v1.0.0"
+            };
+            var content = new StringContent(
+                System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("/", content);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+        finally
+        {
+            Directory.Delete(projectDir, true);
+        }
+    }
 }

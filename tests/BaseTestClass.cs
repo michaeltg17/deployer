@@ -1,28 +1,39 @@
-using Moq;
+using Api.Models;
+using Api.Services;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace Tests;
 
 public class BaseTestClass : WebApplicationFactory<Program>
 {
+    public string TestProjectsDir { get; }
+
     public BaseTestClass()
     {
-        Environment.SetEnvironmentVariable("GhcrUser", "test-user");
-        Environment.SetEnvironmentVariable("ImageRepo", "ghcr.io/michaeltg17/deployer");
-        Environment.SetEnvironmentVariable("DeployBaseDir", "/tmp/test-deploy");
-        Environment.SetEnvironmentVariable("GhcrToken", "test-token");
-        Environment.SetEnvironmentVariable("KeePassDbPath", "/tmp/test.kdbx");
-        Environment.SetEnvironmentVariable("KeePassDbPassword", "test-db-pass");
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.GhcrUser), "test-user");
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.ImageRepo), "ghcr.io/michaeltg17/deployer");
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.GhcrToken), "test-token");
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPath), "/tmp/test.kdbx");
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPassword), "test-db-pass");
+
+        TestProjectsDir = Path.Combine(Path.GetTempPath(), $"test-projects-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(TestProjectsDir);
+        Environment.SetEnvironmentVariable(nameof(DeployerSettings.ProjectsDir), TestProjectsDir);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
-        builder.ConfigureServices(MockDockerClient);
+        builder.ConfigureServices(services =>
+        {
+            MockDockerClient(services);
+            MockProcessRunner(services);
+        });
     }
 
     static void MockDockerClient(IServiceCollection services)
@@ -49,6 +60,34 @@ public class BaseTestClass : WebApplicationFactory<Program>
         mock.Setup(x => x.Images).Returns(imagesMock.Object);
 
         var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IDockerClient));
+        if (existing != null)
+            services.Remove(existing);
+        services.AddSingleton(mock.Object);
+    }
+
+    static void MockProcessRunner(IServiceCollection services)
+    {
+        var mock = new Mock<IProcessRunner>();
+
+        mock.Setup(x => x.Run(
+            "keepassxc-cli",
+            It.IsAny<string>(),
+            It.IsAny<int>(),
+            It.IsAny<string?>(),
+            It.IsAny<Dictionary<string, string>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessResult { ExitCode = 0, Stdout = "ENV_VAR=value\n", Stderr = "" });
+
+        mock.Setup(x => x.Run(
+            "docker",
+            It.IsAny<string>(),
+            It.IsAny<int>(),
+            It.IsAny<string?>(),
+            It.IsAny<Dictionary<string, string>>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessResult { ExitCode = 0, Stdout = "", Stderr = "" });
+
+        var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IProcessRunner));
         if (existing != null)
             services.Remove(existing);
         services.AddSingleton(mock.Object);

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using Api.Logging;
 using Api.Models;
@@ -6,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
-public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOptions<DeployerSettings> settings)
+public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOptions<DeployerSettings> settings, IProcessRunner processRunner)
 {
     private readonly string dbPath = settings.Value.KeePassDbPath!;
     private readonly string password = settings.Value.KeePassDbPassword!;
@@ -49,31 +48,15 @@ public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOption
 
     private async Task<string> ExtractAttachment(string project, string attachmentName)
     {
-        var psi = new ProcessStartInfo
+        var arguments = $"--password \"{password}\" attachment-export --stdout \"{dbPath}\" \"{projectsGroup}/{project}\" \"{attachmentName}\"";
+        var result = await processRunner.Run("keepassxc-cli", arguments, 30_000);
+
+        if (result.ExitCode != 0)
         {
-            FileName = "keepassxc-cli",
-            Arguments = $"--password \"{password}\" attachment-export --stdout \"{dbPath}\" \"{projectsGroup}/{project}\" \"{attachmentName}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to start keepassxc-cli");
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
-
-        process.WaitForExit(30_000);
-
-        if (process.ExitCode != 0)
-        {
-            var stderr = await stderrTask;
-            logger.LogKeePassCliFailed(process.ExitCode, projectsGroup, project, attachmentName, stderr);
+            logger.LogKeePassCliFailed(result.ExitCode, projectsGroup, project, attachmentName, result.Stderr);
             return string.Empty;
         }
 
-        return await stdoutTask;
+        return result.Stdout;
     }
 }

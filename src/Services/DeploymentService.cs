@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Api.Exceptions;
 using Api.Logging;
 using Api.Models;
@@ -12,7 +11,7 @@ namespace Api.Services;
 public sealed class DeploymentService(
     ILogger<DeploymentService> logger,
     IOptions<DeployerSettings> settings,
-    IDockerClient dockerClient, KeePassEnvService keepassEnvService)
+    IDockerClient dockerClient, KeePassEnvService keepassEnvService, IProcessRunner processRunner)
 {
     private readonly DeployerSettings deployerSettings = settings.Value;
 
@@ -21,7 +20,7 @@ public sealed class DeploymentService(
         if (DeployRequestValidator.Validate(request) is { } validationEx)
             throw validationEx;
 
-        var projectDir = Path.Combine("/projects", request.Project!);
+        var projectDir = Path.Combine(deployerSettings.ProjectsDir, request.Project!);
         var composeFile = Path.Combine(projectDir, "docker-compose.yml");
 
         if (!File.Exists(composeFile))
@@ -78,32 +77,10 @@ public sealed class DeploymentService(
         }
     }
 
-    private async Task<(int ExitCode, string Stdout, string Stderr)> RunComposeUp(string composeFile, string tag)
+    private async Task<ProcessResult> RunComposeUp(string composeFile, string tag)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "docker",
-            Arguments = $"compose -f \"{composeFile}\" up -d --force-recreate",
-            WorkingDirectory = Path.GetDirectoryName(composeFile),
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            EnvironmentVariables = { ["TAG"] = tag }
-        };
-
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException($"Failed to start process: docker compose -f {composeFile} up -d --force-recreate");
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
-
-        if (!process.WaitForExit(300_000))
-        {
-            process.Kill();
-            throw new TimeoutException("Docker compose up timed out");
-        }
-
-        return (process.ExitCode, await stdoutTask, await stderrTask);
+        var arguments = $"compose -f \"{composeFile}\" up -d --force-recreate";
+        var workingDir = Path.GetDirectoryName(composeFile) ?? ".";
+        return await processRunner.Run("docker", arguments, 300_000, workingDir, new Dictionary<string, string> { ["TAG"] = tag });
     }
 }

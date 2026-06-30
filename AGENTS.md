@@ -85,3 +85,8 @@ docker build -t deployer . && docker run --rm -it -v /var/run/docker.sock:/var/r
 ```bash
 dotnet test tests/Tests.csproj
 ```
+
+## Coding Conventions
+
+- **No `Async` suffix** — don't name methods `RunAsync`, do `Run`. The `async` modifier on the method body is sufficient.
+- **Models over tuples** — use a proper response class instead of `Task<(int, string, string)>`
