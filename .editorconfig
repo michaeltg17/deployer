@@ -1,0 +1,5 @@
+root = true
+
+[*.cs]
+# CA1707: Underscores in identifiers - xUnit convention uses underscores for test names
+dotnet_diagnostic.CA1707.severity = none

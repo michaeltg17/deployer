@@ -1,6 +1,6 @@
 namespace Api.Logging;
 
-public static partial class ILoggerExtensions
+internal static partial class ILoggerExtensions
 {
     // DeploymentService
     [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Deploying {image} to {project}/{environment}.")]

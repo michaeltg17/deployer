@@ -10,7 +10,8 @@ using Moq;
 
 namespace Tests;
 
-public class BaseTestClass : WebApplicationFactory<Program>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "Tests public")]
+public sealed class BaseTestClass : WebApplicationFactory<Program>
 {
     public string TestProjectsDir { get; }
 
@@ -22,6 +23,7 @@ public class BaseTestClass : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
         base.ConfigureWebHost(builder);
 
         builder.ConfigureAppConfiguration(config =>

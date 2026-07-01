@@ -3,10 +3,13 @@ using Api.Models;
 
 namespace Api.Validation;
 
-public static class DeployRequestValidator
+internal static class DeployRequestValidator
 {
     public static InvalidDeployRequestException? Validate(DeployRequest request)
     {
+        if (request is null)
+            return null;
+
         var invalidFields = new List<string>();
 
         if (string.IsNullOrWhiteSpace(request.Project))

@@ -6,7 +6,7 @@ using System.Net;
 
 namespace Api.Extensions;
 
-public static class ExceptionHandlerExtensions
+internal static class ExceptionHandlerExtensions
 {
     public static WebApplication UseCustomExceptionHandler(this WebApplication app)
     {
@@ -28,7 +28,7 @@ public static class ExceptionHandlerExtensions
 
             var problemDetailsContext = BuildProblemDetailsContext(exception, httpContext, env);
 
-            await problemDetailsService.WriteAsync(problemDetailsContext);
+            await problemDetailsService.WriteAsync(problemDetailsContext).ConfigureAwait(false);
         }));
 
         return app;

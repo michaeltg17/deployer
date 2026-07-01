@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
-public sealed class DeploymentService(
+internal sealed class DeploymentService(
     ILogger<DeploymentService> logger,
     IOptions<DeployerSettings> settings,
     IDockerClient dockerClient, KeePassEnvService keepassEnvService, IProcessRunner processRunner)
@@ -17,6 +17,8 @@ public sealed class DeploymentService(
 
     public async Task Deploy(DeployRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         if (DeployRequestValidator.Validate(request) is { } validationEx)
             throw validationEx;
 
@@ -37,18 +39,18 @@ public sealed class DeploymentService(
             File.Copy(composeFile, Path.Combine(tempDir, "docker-compose.yml"));
 
             logger.LogExtractingEnv(request.Project!, request.Environment!);
-            await keepassEnvService.WriteEnvFiles(tempDir, request.Project!, request.Environment!);
+            await keepassEnvService.WriteEnvFiles(tempDir, request.Project!, request.Environment!).ConfigureAwait(false);
 
             logger.LogPullingImage(image);
             await dockerClient.Images.CreateImageAsync(
                 new ImagesCreateParameters { FromImage = deployerSettings.ImageRepo, Tag = request.Tag },
                 null,
-                new Progress<JSONMessage>());
+                new Progress<JSONMessage>()).ConfigureAwait(false);
             logger.LogImagePulled();
 
             var tempComposeFile = Path.Combine(tempDir, "docker-compose.yml");
             logger.LogRunningCompose(tempDir);
-            var composeResult = await RunComposeUp(tempComposeFile, request.Tag!);
+            var composeResult = await RunComposeUp(tempComposeFile, request.Tag!).ConfigureAwait(false);
             if (composeResult.ExitCode != 0)
             {
                 logger.LogComposeFailed(composeResult.Stderr);
@@ -59,7 +61,7 @@ public sealed class DeploymentService(
         }
         finally
         {
-            await keepassEnvService.Cleanup(tempDir);
+            await keepassEnvService.Cleanup(tempDir).ConfigureAwait(false);
             try
             {
                 Directory.Delete(tempDir, true);
@@ -75,6 +77,6 @@ public sealed class DeploymentService(
     {
         var arguments = $"compose -f \"{composeFile}\" up -d --force-recreate";
         var workingDir = Path.GetDirectoryName(composeFile) ?? ".";
-        return await processRunner.Run("docker", arguments, 300_000, workingDir, new Dictionary<string, string> { ["TAG"] = tag });
+        return await processRunner.Run("docker", arguments, 300_000, workingDir, new Dictionary<string, string> { ["TAG"] = tag }).ConfigureAwait(false);
     }
 }

@@ -1,6 +1,6 @@
 namespace Api.Models;
 
-public sealed class DeployerSettings
+internal sealed class DeployerSettings
 {
     public required string ImageRepo { get; set; }
 

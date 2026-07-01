@@ -3,15 +3,8 @@ using Api.Services;
 
 namespace Tests;
 
-sealed class DelegatingProcessRunner : IProcessRunner
+sealed class DelegatingProcessRunner(IProcessRunner inner) : IProcessRunner
 {
-    private readonly IProcessRunner inner;
-
-    public DelegatingProcessRunner(IProcessRunner inner)
-    {
-        this.inner = inner;
-    }
-
     public async Task<ProcessResult> Run(
         string fileName,
         string arguments,
@@ -23,6 +16,6 @@ sealed class DelegatingProcessRunner : IProcessRunner
         if (string.Equals(fileName, "keepassxc-cli", StringComparison.OrdinalIgnoreCase))
             return new ProcessResult { ExitCode = 1, Stdout = "", Stderr = "keepassxc-cli not found" };
 
-        return await inner.Run(fileName, arguments, timeoutMs, workingDirectory, environmentVariables, cancellationToken);
+        return await inner.Run(fileName, arguments, timeoutMs, workingDirectory, environmentVariables, cancellationToken).ConfigureAwait(false);
     }
 }

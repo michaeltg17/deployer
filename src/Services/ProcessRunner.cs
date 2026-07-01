@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Api.Services;
 
-public sealed class ProcessRunner : IProcessRunner
+internal sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessResult> Run(
         string fileName,
@@ -35,20 +35,16 @@ public sealed class ProcessRunner : IProcessRunner
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException($"Failed to start process: {fileName} {arguments}");
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+        var stderrTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
 
-        if (!process.WaitForExit(timeoutMs))
-        {
-            process.Kill();
-            throw new TimeoutException($"Process timed out: {fileName} {arguments}");
-        }
+        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
         return new ProcessResult
         {
             ExitCode = process.ExitCode,
-            Stdout = await stdoutTask,
-            Stderr = await stderrTask
+            Stdout = await stdoutTask.ConfigureAwait(false),
+            Stderr = await stderrTask.ConfigureAwait(false)
         };
     }
 }

@@ -1,6 +1,7 @@
 using Api.Models;
 using Api.Services;
 using Docker.DotNet;
+using Docker.DotNet.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -8,12 +9,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Tests;
 
-public class RealDockerTestClass : WebApplicationFactory<Program>, IDisposable
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "Tests public")]
+public sealed class RealDockerTestClass : WebApplicationFactory<Program>
 {
     public string TestProjectsDir { get; }
     private readonly string testKdbxPath;
+    private readonly DockerClient dockerClient;
 
-    private readonly IDockerClient dockerClient;
+    public IDockerClient DockerClient => Services.GetRequiredService<IDockerClient>();
 
     public RealDockerTestClass()
     {
@@ -21,12 +24,15 @@ public class RealDockerTestClass : WebApplicationFactory<Program>, IDisposable
         testKdbxPath = Path.Combine(testRoot, "test.kdbx");
         TestProjectsDir = Path.Combine(testRoot, "projects");
 
-        dockerClient = new DockerClientConfiguration().CreateClient();
+        var config = new DockerClientConfiguration();
+        dockerClient = config.CreateClient();
+        config.Dispose();
         CleanupTestContainers();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
         base.ConfigureWebHost(builder);
 
         builder.ConfigureAppConfiguration(config =>
@@ -49,37 +55,28 @@ public class RealDockerTestClass : WebApplicationFactory<Program>, IDisposable
         });
     }
 
-    public IDockerClient DockerClient => Services.GetRequiredService<IDockerClient>();
-
     private void CleanupTestContainers()
     {
         try
         {
             var containers = dockerClient.Containers.ListContainersAsync(
-                new Docker.DotNet.Models.ContainersListParameters { All = true }).Result;
-            var testContainers = containers.Where(c => c.Names.Any(n => n.StartsWith("/deployer-test-"))).ToList();
+                new ContainersListParameters { All = true }).Result;
+            var testContainers = containers.Where(c => c.Names.Any(n => n.StartsWith("/deployer-test-", StringComparison.Ordinal))).ToList();
 
             foreach (var container in testContainers)
             {
                 if (container.State == "running")
                 {
                     dockerClient.Containers.StopContainerAsync(container.ID,
-                        new Docker.DotNet.Models.ContainerStopParameters()).Wait();
+                        new ContainerStopParameters()).Wait();
                 }
                 dockerClient.Containers.RemoveContainerAsync(container.ID,
-                    new Docker.DotNet.Models.ContainerRemoveParameters { Force = true }).Wait();
+                    new ContainerRemoveParameters { Force = true }).Wait();
             }
         }
         catch
         {
             // Ignore cleanup errors, containers may not exist
         }
-    }
-
-    public new void Dispose()
-    {
-        CleanupTestContainers();
-        dockerClient.Dispose();
-        base.Dispose();
     }
 }

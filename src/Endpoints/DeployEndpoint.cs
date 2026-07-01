@@ -4,7 +4,7 @@ using Api.Services;
 
 namespace Api.Endpoints;
 
-public static class DeployEndpoint
+internal static class DeployEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
@@ -12,7 +12,7 @@ public static class DeployEndpoint
             [FromBody] DeployRequest request,
             [FromServices] DeploymentService deployService) =>
         {
-            await deployService.Deploy(request);
+            await deployService.Deploy(request).ConfigureAwait(false);
             return Results.Ok();
         });
     }

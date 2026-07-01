@@ -1,6 +1,6 @@
 namespace Api.Models;
 
-public sealed class ProcessResult
+internal sealed class ProcessResult
 {
     public int ExitCode { get; init; }
     public required string Stdout { get; init; }

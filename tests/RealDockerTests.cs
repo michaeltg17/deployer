@@ -2,14 +2,22 @@ using System.Net;
 using System.Text;
 using Api.Models;
 using Docker.DotNet;
+using Docker.DotNet.Models;
 using Xunit;
 
 namespace Tests;
 
-public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDockerTestClass>
+public sealed class RealDockerTests : IClassFixture<RealDockerTestClass>
 {
-    private readonly HttpClient client = factory.CreateClient();
-    private readonly IDockerClient dockerClient = factory.DockerClient;
+    private readonly HttpClient client;
+    private readonly IDockerClient dockerClient;
+
+    public RealDockerTests(RealDockerTestClass factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        client = factory.CreateClient();
+        dockerClient = factory.DockerClient;
+    }
 
     [Fact]
     public async Task ValidRequest_Latest_Returns200_AndStartsContainer()
@@ -29,7 +37,7 @@ public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDo
 
         try
         {
-            await StopAndRemoveContainer(containerName);
+            await StopAndRemoveContainer(containerName).ConfigureAwait(false);
         }
         catch { }
 
@@ -39,15 +47,15 @@ public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDo
             Environment = environment,
             Tag = tag,
         };
-        var content = new StringContent(
+        using var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/", content);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content).ConfigureAwait(false);
 
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         Assert.True(response.StatusCode == HttpStatusCode.OK, $"{response.StatusCode}: {responseBody}");
 
         var containers = await dockerClient.Containers.ListContainersAsync(
-            new Docker.DotNet.Models.ContainersListParameters { All = true });
+            new ContainersListParameters { All = true }).ConfigureAwait(false);
         var container = containers.FirstOrDefault(c => c.Names.Any(n => n == $"/{containerName}"));
         Assert.NotNull(container);
         Assert.Equal(expectedImage, container.Image);
@@ -56,12 +64,12 @@ public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDo
     async Task StopAndRemoveContainer(string name)
     {
         var containers = await dockerClient.Containers.ListContainersAsync(
-            new Docker.DotNet.Models.ContainersListParameters { All = true });
+            new ContainersListParameters { All = true }).ConfigureAwait(false);
         var container = containers.FirstOrDefault(c => c.Names.Any(n => n == $"/{name}"));
         if (container == null)
             return;
 
-        await dockerClient.Containers.StopContainerAsync(container.ID, new Docker.DotNet.Models.ContainerStopParameters());
-        await dockerClient.Containers.RemoveContainerAsync(container.ID, new Docker.DotNet.Models.ContainerRemoveParameters { Force = true });
+        await dockerClient.Containers.StopContainerAsync(container.ID, new ContainerStopParameters()).ConfigureAwait(false);
+        await dockerClient.Containers.RemoveContainerAsync(container.ID, new ContainerRemoveParameters { Force = true }).ConfigureAwait(false);
     }
 }

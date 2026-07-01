@@ -3,10 +3,12 @@ using Api.Models;
 
 namespace Api.Validation;
 
-public sealed class DeployerSettingsValidator : IValidateOptions<DeployerSettings>
+internal sealed class DeployerSettingsValidator : IValidateOptions<DeployerSettings>
 {
     public ValidateOptionsResult Validate(string? name, DeployerSettings options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         var errors = new List<string>();
 
         if (string.IsNullOrWhiteSpace(options.ImageRepo))

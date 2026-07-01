@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
-public sealed class KeePassEnvService(
+internal sealed class KeePassEnvService(
     ILogger<KeePassEnvService> logger,
     IOptions<DeployerSettings> settings,
     IProcessRunner processRunner)
@@ -18,7 +18,7 @@ public sealed class KeePassEnvService(
     {
         var sb = new StringBuilder();
 
-        var common = await ExtractAttachment(project, ".env");
+        var common = await ExtractAttachment(project, ".env").ConfigureAwait(false);
         if (!string.IsNullOrEmpty(common))
         {
             sb.Append(common);
@@ -26,12 +26,12 @@ public sealed class KeePassEnvService(
                 sb.AppendLine();
         }
 
-        var envSpecific = await ExtractAttachment(project, $".env.{environment}");
+        var envSpecific = await ExtractAttachment(project, $".env.{environment}").ConfigureAwait(false);
         if (!string.IsNullOrEmpty(envSpecific))
             sb.Append(envSpecific);
 
         var envPath = Path.Combine(targetDir, ".env");
-        await File.WriteAllTextAsync(envPath, sb.ToString());
+        await File.WriteAllTextAsync(envPath, sb.ToString()).ConfigureAwait(false);
         logger.LogEnvWritten(targetDir, project, environment);
     }
 
@@ -52,7 +52,7 @@ public sealed class KeePassEnvService(
     private async Task<string> ExtractAttachment(string project, string attachmentName)
     {
         var arguments = $"--password \"{password}\" attachment-export --stdout \"{dbPath}\" \"{projectsGroup}/{project}\" \"{attachmentName}\"";
-        var result = await processRunner.Run("keepassxc-cli", arguments, 30_000);
+        var result = await processRunner.Run("keepassxc-cli", arguments, 30_000).ConfigureAwait(false);
 
         if (result.ExitCode != 0)
         {

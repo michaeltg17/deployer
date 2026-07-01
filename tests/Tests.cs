@@ -5,14 +5,22 @@ using Xunit;
 
 namespace Tests;
 
-public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
+public sealed class DeployTests : IClassFixture<BaseTestClass>
 {
-    private readonly HttpClient client = factory.CreateClient();
+    private readonly BaseTestClass factory;
+    private readonly HttpClient client;
+
+    public DeployTests(BaseTestClass factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        this.factory = factory;
+        client = factory.CreateClient();
+    }
 
     [Fact]
     public async Task MissingBody_Returns400()
     {
-        var response = await client.PostAsync("/", null);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), null!);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -20,8 +28,8 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
     [Fact]
     public async Task InvalidBody_Returns400()
     {
-        var response = await client.PostAsync("/",
-            new StringContent("not-json", Encoding.UTF8, "application/json"));
+        using var content = new StringContent("not-json", Encoding.UTF8, "application/json");
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -30,9 +38,9 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
     public async Task MissingEnvironment_Returns400()
     {
         var body = new DeployRequest { Project = "test", Tag = "v1.0.0" };
-        var content = new StringContent(
+        using var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/", content);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -41,9 +49,9 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
     public async Task MissingTag_Returns400()
     {
         var body = new DeployRequest { Project = "test", Environment = "dev" };
-        var content = new StringContent(
+        using var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/", content);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -57,14 +65,14 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
             Environment = "dev",
             Tag = "v1.0.0"
         };
-        var content = new StringContent(
+        using var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/", content);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var errorResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains("docker-compose.yml", errorResponse);
+        Assert.Contains("docker-compose.yml", errorResponse, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -78,9 +86,9 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
                 Environment = environment,
                 Tag = "v1.0.0"
             };
-            var content = new StringContent(
+            using var content = new StringContent(
                 System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync("/", content);
+            var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -92,7 +100,7 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
         var projectName = "test-ok";
         var projectDir = Path.Combine(factory.TestProjectsDir, projectName);
         Directory.CreateDirectory(projectDir);
-        File.WriteAllText(Path.Combine(projectDir, "docker-compose.yml"), "services:\n  app:\n    image: test:test\n");
+        await File.WriteAllTextAsync(Path.Combine(projectDir, "docker-compose.yml"), "services:\n  app:\n    image: test:test\n");
         try
         {
             var body = new DeployRequest
@@ -101,9 +109,9 @@ public class Tests(BaseTestClass factory) : IClassFixture<BaseTestClass>
                 Environment = "dev",
                 Tag = "v1.0.0"
             };
-            var content = new StringContent(
+            using var content = new StringContent(
                 System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync("/", content);
+            var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
