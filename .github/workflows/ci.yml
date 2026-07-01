@@ -33,7 +33,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=deployer-ci
 
       - name: Run CI checks
-        run: docker run --rm deployer-ci:latest
+        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock deployer-ci:latest
 
       - name: Upload test results
         if: always()
