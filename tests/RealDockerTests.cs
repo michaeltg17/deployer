@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using System.Net;
 using System.Text;
 using Api.Models;
+using Docker.DotNet;
 using Xunit;
 
 namespace Tests;
@@ -9,6 +9,7 @@ namespace Tests;
 public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDockerTestClass>
 {
     private readonly HttpClient client = factory.CreateClient();
+    private readonly IDockerClient dockerClient = factory.DockerClient;
 
     [Fact]
     public async Task ValidRequest_Latest_Returns200_AndStartsContainer()
@@ -28,8 +29,7 @@ public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDo
 
         try
         {
-            _ = await RunProcess("docker", $"stop {containerName}");
-            _ = await RunProcess("docker", $"rm {containerName}");
+            await StopAndRemoveContainer(containerName);
         }
         catch { }
 
@@ -46,32 +46,22 @@ public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDo
         var responseBody = await response.Content.ReadAsStringAsync();
         Assert.True(response.StatusCode == HttpStatusCode.OK, $"{response.StatusCode}: {responseBody}");
 
-        var inspectResult = await RunProcess("docker", $"inspect --format '{{{{.Config.Image}}}}' {containerName}");
-        Assert.Equal(0, inspectResult.ExitCode);
-        Assert.Equal(expectedImage, inspectResult.Stdout.Trim().Trim('"', '\''));
+        var containers = await dockerClient.Containers.ListContainersAsync(
+            new Docker.DotNet.Models.ContainersListParameters { All = true });
+        var container = containers.FirstOrDefault(c => c.Names.Any(n => n == $"/{containerName}"));
+        Assert.NotNull(container);
+        Assert.Equal(expectedImage, container.Image);
     }
 
-    static async Task<ProcessResult> RunProcess(string fileName, string arguments)
+    async Task StopAndRemoveContainer(string name)
     {
-        using var process = Process.Start(new ProcessStartInfo
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        }) ?? throw new InvalidOperationException($"Failed to start process: {fileName} {arguments}");
+        var containers = await dockerClient.Containers.ListContainersAsync(
+            new Docker.DotNet.Models.ContainersListParameters { All = true });
+        var container = containers.FirstOrDefault(c => c.Names.Any(n => n == $"/{name}"));
+        if (container == null)
+            return;
 
-        process.WaitForExit(60_000);
-        var stdout = await process.StandardOutput.ReadToEndAsync();
-        var stderr = await process.StandardError.ReadToEndAsync();
-
-        return new ProcessResult
-        {
-            ExitCode = process.ExitCode,
-            Stdout = stdout,
-            Stderr = stderr
-        };
+        await dockerClient.Containers.StopContainerAsync(container.ID, new Docker.DotNet.Models.ContainerStopParameters());
+        await dockerClient.Containers.RemoveContainerAsync(container.ID, new Docker.DotNet.Models.ContainerRemoveParameters { Force = true });
     }
 }

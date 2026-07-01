@@ -43,4 +43,6 @@ public class RealDockerTestClass : WebApplicationFactory<Program>
             services.AddSingleton<IProcessRunner>(sp => new DelegatingProcessRunner(new ProcessRunner()));
         });
     }
+
+    public IDockerClient DockerClient => Services.GetRequiredService<IDockerClient>();
 }
