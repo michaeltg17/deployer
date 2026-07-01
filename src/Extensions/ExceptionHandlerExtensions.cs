@@ -1,6 +1,7 @@
 using Api.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Hosting;
 using System.Net;
 
 namespace Api.Extensions;
@@ -14,6 +15,7 @@ public static class ExceptionHandlerExtensions
             httpContext.Response.ContentType = "application/problem+json";
             var problemDetailsService = httpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
 
+            var env = httpContext.RequestServices.GetRequiredService<IHostEnvironment>();
             var exceptionHandlerFeature = httpContext.Features.GetRequiredFeature<IExceptionHandlerFeature>();
             var exception = exceptionHandlerFeature.Error;
 
@@ -24,7 +26,7 @@ public static class ExceptionHandlerExtensions
                 _ => (int)HttpStatusCode.InternalServerError,
             };
 
-            var problemDetailsContext = BuildProblemDetailsContext(exception, httpContext);
+            var problemDetailsContext = BuildProblemDetailsContext(exception, httpContext, env);
 
             await problemDetailsService.WriteAsync(problemDetailsContext);
         }));
@@ -32,18 +34,19 @@ public static class ExceptionHandlerExtensions
         return app;
     }
 
-    static ProblemDetailsContext BuildProblemDetailsContext(Exception exception, HttpContext httpContext)
-    {
+static ProblemDetailsContext BuildProblemDetailsContext(Exception exception, HttpContext httpContext, IHostEnvironment env)
+{
         var isInternalServerError = httpContext.Response.StatusCode == (int)HttpStatusCode.InternalServerError;
+        var hideDetails = isInternalServerError && !env.IsDevelopment();
 
         return new ProblemDetailsContext
         {
-            Exception = isInternalServerError ? null : exception,
+            Exception = hideDetails ? null : exception,
             HttpContext = httpContext,
             ProblemDetails =
             {
-                Title = isInternalServerError ? "InternalServerError" : exception!.GetType().GetNameWithoutGenericArity(),
-                Detail = isInternalServerError ? "Check the logs for more information." : exception!.Message,
+                Title = hideDetails ? "InternalServerError" : exception!.GetType().GetNameWithoutGenericArity(),
+                Detail = hideDetails ? "Check the logs for more information." : exception!.Message,
                 Status = httpContext.Response.StatusCode,
                 Instance = httpContext.Request.Path
             }
