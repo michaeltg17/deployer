@@ -137,3 +137,4 @@ There are two levels of KeePass mocking:
 
 - **No `Async` suffix** — don't name methods `RunAsync`, do `Run`. The `async` modifier on the method body is sufficient.
 - **Models over tuples** — use a proper response class instead of `Task<(int, string, string)>`
+- **No leading underscore** — name fields `inner`, `client`, `testKdbxPath`, not `_inner`, `_client`, `_testKdbxPath`

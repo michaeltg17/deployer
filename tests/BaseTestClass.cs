@@ -4,6 +4,7 @@ using Docker.DotNet;
 using Docker.DotNet.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
@@ -15,18 +16,25 @@ public class BaseTestClass : WebApplicationFactory<Program>
 
     public BaseTestClass()
     {
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.ImageRepo), "ghcr.io/michaeltg17/deployer");
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPath), "/tmp/test.kdbx");
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.KeePassDbPassword), "test-db-pass");
-
         TestProjectsDir = Path.Combine(Path.GetTempPath(), $"test-projects-{Guid.NewGuid():N}");
         Directory.CreateDirectory(TestProjectsDir);
-        Environment.SetEnvironmentVariable(nameof(DeployerSettings.ProjectsDir), TestProjectsDir);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
+
+        builder.ConfigureAppConfiguration(config =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { nameof(DeployerSettings.ImageRepo), "ghcr.io/michaeltg17/deployer" },
+                { nameof(DeployerSettings.KeePassDbPath), "/tmp/test.kdbx" },
+                { nameof(DeployerSettings.KeePassDbPassword), "test-db-pass" },
+                { nameof(DeployerSettings.ProjectsDir), TestProjectsDir },
+            });
+        });
+
         builder.ConfigureServices(services =>
         {
             MockDockerClient(services);

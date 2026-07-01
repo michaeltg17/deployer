@@ -5,7 +5,10 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
-public sealed class KeePassEnvService(ILogger<KeePassEnvService> logger, IOptions<DeployerSettings> settings, IProcessRunner processRunner)
+public sealed class KeePassEnvService(
+    ILogger<KeePassEnvService> logger,
+    IOptions<DeployerSettings> settings,
+    IProcessRunner processRunner)
 {
     private readonly string dbPath = settings.Value.KeePassDbPath!;
     private readonly string password = settings.Value.KeePassDbPassword!;

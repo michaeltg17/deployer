@@ -5,11 +5,11 @@ namespace Tests;
 
 sealed class DelegatingProcessRunner : IProcessRunner
 {
-    private readonly IProcessRunner _inner;
+    private readonly IProcessRunner inner;
 
     public DelegatingProcessRunner(IProcessRunner inner)
     {
-        _inner = inner;
+        this.inner = inner;
     }
 
     public async Task<ProcessResult> Run(
@@ -23,6 +23,6 @@ sealed class DelegatingProcessRunner : IProcessRunner
         if (string.Equals(fileName, "keepassxc-cli", StringComparison.OrdinalIgnoreCase))
             return new ProcessResult { ExitCode = 1, Stdout = "", Stderr = "keepassxc-cli not found" };
 
-        return await _inner.Run(fileName, arguments, timeoutMs, workingDirectory, environmentVariables, cancellationToken);
+        return await inner.Run(fileName, arguments, timeoutMs, workingDirectory, environmentVariables, cancellationToken);
     }
 }

@@ -8,7 +8,7 @@ namespace Tests;
 
 public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDockerTestClass>
 {
-    private readonly HttpClient _client = factory.CreateClient();
+    private readonly HttpClient client = factory.CreateClient();
 
     [Fact]
     public async Task ValidRequest_Latest_Returns200_AndStartsContainer()
@@ -41,7 +41,7 @@ public class RealDockerTests(RealDockerTestClass factory) : IClassFixture<RealDo
         };
         var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await _client.PostAsync("/", content);
+        var response = await client.PostAsync("/", content);
 
         var responseBody = await response.Content.ReadAsStringAsync();
         Assert.True(response.StatusCode == HttpStatusCode.OK, $"{response.StatusCode}: {responseBody}");
