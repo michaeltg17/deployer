@@ -8,16 +8,21 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Tests;
 
-public class RealDockerTestClass : WebApplicationFactory<Program>
+public class RealDockerTestClass : WebApplicationFactory<Program>, IDisposable
 {
     public string TestProjectsDir { get; }
     private readonly string testKdbxPath;
+
+    private readonly IDockerClient dockerClient;
 
     public RealDockerTestClass()
     {
         var testRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(RealDockerTestClass).Assembly.Location)!, "..", "..", ".."));
         testKdbxPath = Path.Combine(testRoot, "test.kdbx");
         TestProjectsDir = Path.Combine(testRoot, "projects");
+
+        dockerClient = new DockerClientConfiguration().CreateClient();
+        CleanupTestContainers();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -45,4 +50,36 @@ public class RealDockerTestClass : WebApplicationFactory<Program>
     }
 
     public IDockerClient DockerClient => Services.GetRequiredService<IDockerClient>();
+
+    private void CleanupTestContainers()
+    {
+        try
+        {
+            var containers = dockerClient.Containers.ListContainersAsync(
+                new Docker.DotNet.Models.ContainersListParameters { All = true }).Result;
+            var testContainers = containers.Where(c => c.Names.Any(n => n.StartsWith("/deployer-test-"))).ToList();
+
+            foreach (var container in testContainers)
+            {
+                if (container.State == "running")
+                {
+                    dockerClient.Containers.StopContainerAsync(container.ID,
+                        new Docker.DotNet.Models.ContainerStopParameters()).Wait();
+                }
+                dockerClient.Containers.RemoveContainerAsync(container.ID,
+                    new Docker.DotNet.Models.ContainerRemoveParameters { Force = true }).Wait();
+            }
+        }
+        catch
+        {
+            // Ignore cleanup errors, containers may not exist
+        }
+    }
+
+    public new void Dispose()
+    {
+        CleanupTestContainers();
+        dockerClient.Dispose();
+        base.Dispose();
+    }
 }
