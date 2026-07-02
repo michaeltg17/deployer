@@ -20,7 +20,7 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
     [Fact]
     public async Task MissingBody_Returns400()
     {
-        var response = await client.PostAsync(new Uri("/", UriKind.Relative), null);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), null, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -29,7 +29,7 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
     public async Task InvalidBody_Returns400()
     {
         using var content = new StringContent("not-json", Encoding.UTF8, "application/json");
-        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -40,7 +40,7 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
         var body = new DeployRequest { Project = "test", Tag = "v1.0.0" };
         using var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -51,7 +51,7 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
         var body = new DeployRequest { Project = "test", Environment = "dev" };
         using var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -67,11 +67,11 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
         };
         using var content = new StringContent(
             System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-        var errorResponse = await response.Content.ReadAsStringAsync();
+        var errorResponse = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("docker-compose.yml", errorResponse, StringComparison.Ordinal);
     }
 
@@ -88,7 +88,7 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
             };
             using var content = new StringContent(
                 System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
+            var response = await client.PostAsync(new Uri("/", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -100,7 +100,7 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
         var projectName = "test-ok";
         var projectDir = Path.Combine(factory.TestProjectsDir, projectName);
         Directory.CreateDirectory(projectDir);
-        await File.WriteAllTextAsync(Path.Combine(projectDir, "docker-compose.yml"), "services:\n  app:\n    image: test:test\n");
+        await File.WriteAllTextAsync(Path.Combine(projectDir, "docker-compose.yml"), "services:\n  app:\n    image: test:test\n", TestContext.Current.CancellationToken);
         try
         {
             var body = new DeployRequest
@@ -111,7 +111,7 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
             };
             using var content = new StringContent(
                 System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(new Uri("/", UriKind.Relative), content);
+            var response = await client.PostAsync(new Uri("/", UriKind.Relative), content, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
