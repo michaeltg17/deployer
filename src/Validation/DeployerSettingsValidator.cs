@@ -20,9 +20,8 @@ internal sealed class DeployerSettingsValidator : IValidateOptions<DeployerSetti
         if (string.IsNullOrWhiteSpace(options.KeePassDbPassword))
             errors.Add($"The '{nameof(options.KeePassDbPassword)}' setting is required");
 
-        if (errors.Count > 0)
-            return ValidateOptionsResult.Fail(errors);
-
-        return ValidateOptionsResult.Success;
+        return errors.Count > 0
+            ? ValidateOptionsResult.Fail(errors)
+            : ValidateOptionsResult.Success;
     }
 }

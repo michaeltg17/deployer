@@ -13,9 +13,8 @@ sealed class DelegatingProcessRunner(IProcessRunner inner) : IProcessRunner
         Dictionary<string, string>? environmentVariables = null,
         CancellationToken cancellationToken = default)
     {
-        if (string.Equals(fileName, "keepassxc-cli", StringComparison.OrdinalIgnoreCase))
-            return new ProcessResult { ExitCode = 1, Stdout = "", Stderr = "keepassxc-cli not found" };
-
-        return await inner.Run(fileName, arguments, timeoutMs, workingDirectory, environmentVariables, cancellationToken).ConfigureAwait(false);
+        return string.Equals(fileName, "keepassxc-cli", StringComparison.OrdinalIgnoreCase)
+            ? new ProcessResult { ExitCode = 1, Stdout = "", Stderr = "keepassxc-cli not found" }
+            : await inner.Run(fileName, arguments, timeoutMs, workingDirectory, environmentVariables, cancellationToken).ConfigureAwait(false);
     }
 }

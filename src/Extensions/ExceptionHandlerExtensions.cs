@@ -1,7 +1,6 @@
 using Api.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.Hosting;
 using System.Net;
 
 namespace Api.Extensions;
@@ -34,8 +33,8 @@ internal static class ExceptionHandlerExtensions
         return app;
     }
 
-static ProblemDetailsContext BuildProblemDetailsContext(Exception exception, HttpContext httpContext, IHostEnvironment env)
-{
+    static ProblemDetailsContext BuildProblemDetailsContext(Exception exception, HttpContext httpContext, IHostEnvironment env)
+    {
         var isInternalServerError = httpContext.Response.StatusCode == (int)HttpStatusCode.InternalServerError;
         var hideDetails = isInternalServerError && !env.IsDevelopment();
 
@@ -45,8 +44,8 @@ static ProblemDetailsContext BuildProblemDetailsContext(Exception exception, Htt
             HttpContext = httpContext,
             ProblemDetails =
             {
-                Title = hideDetails ? "InternalServerError" : exception!.GetType().GetNameWithoutGenericArity(),
-                Detail = hideDetails ? "Check the logs for more information." : exception!.Message,
+                Title = hideDetails ? "InternalServerError" : exception.GetType().GetNameWithoutGenericArity(),
+                Detail = hideDetails ? "Check the logs for more information." : exception.Message,
                 Status = httpContext.Response.StatusCode,
                 Instance = httpContext.Request.Path
             }

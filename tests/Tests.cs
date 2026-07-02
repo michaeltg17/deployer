@@ -20,7 +20,7 @@ public sealed class DeployTests : IClassFixture<BaseTestClass>
     [Fact]
     public async Task MissingBody_Returns400()
     {
-        var response = await client.PostAsync(new Uri("/", UriKind.Relative), null!);
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), null);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

@@ -9,8 +9,8 @@ internal sealed class KeePassEnvService(
     IOptions<DeployerSettings> settings,
     IProcessRunner processRunner)
 {
-    private readonly string dbPath = settings.Value.KeePassDbPath!;
-    private readonly string password = settings.Value.KeePassDbPassword!;
+    private readonly string dbPath = settings.Value.KeePassDbPath;
+    private readonly string password = settings.Value.KeePassDbPassword;
     private readonly string projectsGroup = "Projects";
 
     public async Task<Dictionary<string, string>> ExtractEnvVariables(string project, string environment)
@@ -41,8 +41,8 @@ internal sealed class KeePassEnvService(
             if (equalsIndex <= 0)
                 continue;
 
-            var key = trimmed.Substring(0, equalsIndex).Trim();
-            var value = trimmed.Substring(equalsIndex + 1).Trim();
+            var key = trimmed[..equalsIndex].Trim();
+            var value = trimmed[(equalsIndex + 1)..].Trim();
 
             if (key.Length > 0)
                 vars[key] = value;
