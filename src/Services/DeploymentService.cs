@@ -31,46 +31,33 @@ internal sealed class DeploymentService(
         var image = $"{deployerSettings.ImageRepo}:{request.Tag}";
         var tempDir = Path.Combine(Path.GetTempPath(), $"deploy-{request.Project}-{request.Environment}-{Guid.NewGuid():N}");
 
-        try
+        logger.LogDeploying(image, request.Project!, request.Environment!);
+
+        Directory.CreateDirectory(tempDir);
+        File.Copy(composeFile, Path.Combine(tempDir, "docker-compose.yml"));
+
+        logger.LogExtractingEnv(request.Project!, request.Environment!);
+        await keepassEnvService.WriteEnvFiles(tempDir, request.Project!, request.Environment!).ConfigureAwait(false);
+
+        logger.LogPullingImage(image);
+        await dockerClient.Images.CreateImageAsync(
+            new ImagesCreateParameters { FromImage = deployerSettings.ImageRepo, Tag = request.Tag },
+            null,
+            new Progress<JSONMessage>()).ConfigureAwait(false);
+        logger.LogImagePulled();
+
+        var tempComposeFile = Path.Combine(tempDir, "docker-compose.yml");
+        logger.LogRunningCompose(tempDir);
+        var composeResult = await RunComposeUp(tempComposeFile, request.Tag!).ConfigureAwait(false);
+        if (composeResult.ExitCode != 0)
         {
-            logger.LogDeploying(image, request.Project!, request.Environment!);
-
-            Directory.CreateDirectory(tempDir);
-            File.Copy(composeFile, Path.Combine(tempDir, "docker-compose.yml"));
-
-            logger.LogExtractingEnv(request.Project!, request.Environment!);
-            await keepassEnvService.WriteEnvFiles(tempDir, request.Project!, request.Environment!).ConfigureAwait(false);
-
-            logger.LogPullingImage(image);
-            await dockerClient.Images.CreateImageAsync(
-                new ImagesCreateParameters { FromImage = deployerSettings.ImageRepo, Tag = request.Tag },
-                null,
-                new Progress<JSONMessage>()).ConfigureAwait(false);
-            logger.LogImagePulled();
-
-            var tempComposeFile = Path.Combine(tempDir, "docker-compose.yml");
-            logger.LogRunningCompose(tempDir);
-            var composeResult = await RunComposeUp(tempComposeFile, request.Tag!).ConfigureAwait(false);
-            if (composeResult.ExitCode != 0)
-            {
-                logger.LogComposeFailed(composeResult.Stderr);
-                throw new DeployerException($"Failed to start services: {composeResult.Stderr}");
-            }
-
-            logger.LogDeploySuccess(request.Tag!, request.Project!, request.Environment!);
+            logger.LogComposeFailed(composeResult.Stderr);
+            throw new DeployerException($"Failed to start services: {composeResult.Stderr}");
         }
-        finally
-        {
-            await keepassEnvService.Cleanup(tempDir).ConfigureAwait(false);
-            try
-            {
-                Directory.Delete(tempDir, true);
-            }
-            catch (Exception ex)
-            {
-                logger.LogTempDirCleanupFailed(tempDir, ex);
-            }
-        }
+
+        logger.LogDeploySuccess(request.Tag!, request.Project!, request.Environment!);
+        await KeePassEnvService.Cleanup(tempDir).ConfigureAwait(false);
+        Directory.Delete(tempDir, true);
     }
 
     private async Task<ProcessResult> RunComposeUp(string composeFile, string tag)

@@ -57,28 +57,21 @@ public sealed class RealDockerTestClass : WebApplicationFactory<Program>, IAsync
 
     private async Task CleanupTestContainers()
     {
-        try
-        {
-            var containers = await dockerClient.Containers.ListContainersAsync(
-                new ContainersListParameters { All = true }).ConfigureAwait(false);
-            var testContainers = containers
-                .Where(c => c.Names.Any(n => n.StartsWith("/deployer-test-", StringComparison.Ordinal)))
-                .ToList();
+        var containers = await dockerClient.Containers.ListContainersAsync(
+            new ContainersListParameters { All = true }).ConfigureAwait(false);
+        var testContainers = containers
+            .Where(c => c.Names.Any(n => n.StartsWith("/deployer-test-", StringComparison.Ordinal)))
+            .ToList();
 
-            foreach (var container in testContainers)
-            {
-                if (container.State == "running")
-                {
-                    await dockerClient.Containers.StopContainerAsync(container.ID,
-                        new ContainerStopParameters()).ConfigureAwait(false);
-                }
-                await dockerClient.Containers.RemoveContainerAsync(container.ID,
-                    new ContainerRemoveParameters { Force = true }).ConfigureAwait(false);
-            }
-        }
-        catch
+        foreach (var container in testContainers)
         {
-            // Ignore cleanup errors, containers may not exist
+            if (container.State == "running")
+            {
+                await dockerClient.Containers.StopContainerAsync(container.ID,
+                    new ContainerStopParameters()).ConfigureAwait(false);
+            }
+            await dockerClient.Containers.RemoveContainerAsync(container.ID,
+                new ContainerRemoveParameters { Force = true }).ConfigureAwait(false);
         }
     }
 

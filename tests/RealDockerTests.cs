@@ -34,42 +34,27 @@ public sealed class RealDockerTests : IClassFixture<RealDockerTestClass>
     async Task DeployAndVerify(string project, string environment, string tag, string expectedImage)
     {
         var containerName = $"deployer-test-{tag}";
+        await StopAndRemoveContainer(containerName).ConfigureAwait(false);
 
-        try
+        var body = new DeployRequest
         {
-            await StopAndRemoveContainer(containerName).ConfigureAwait(false);
-        }
-        catch { }
+            Project = project,
+            Environment = environment,
+            Tag = tag,
+        };
+        using var content = new StringContent(
+            System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        var response = await client.PostAsync(new Uri("/", UriKind.Relative), content).ConfigureAwait(false);
 
-        try
-        {
-            var body = new DeployRequest
-            {
-                Project = project,
-                Environment = environment,
-                Tag = tag,
-            };
-            using var content = new StringContent(
-                System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(new Uri("/", UriKind.Relative), content).ConfigureAwait(false);
+        var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"{response.StatusCode}: {responseBody}");
 
-            var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            Assert.True(response.StatusCode == HttpStatusCode.OK, $"{response.StatusCode}: {responseBody}");
-
-            var containers = await dockerClient.Containers.ListContainersAsync(
-                new ContainersListParameters { All = true }).ConfigureAwait(false);
-            var container = containers.FirstOrDefault(c => c.Names.Any(n => n == $"/{containerName}"));
-            Assert.NotNull(container);
-            Assert.Equal(expectedImage, container.Image);
-        }
-        finally
-        {
-            try
-            {
-                await StopAndRemoveContainer(containerName).ConfigureAwait(false);
-            }
-            catch { }
-        }
+        var containers = await dockerClient.Containers.ListContainersAsync(
+            new ContainersListParameters { All = true }).ConfigureAwait(false);
+        var container = containers.FirstOrDefault(c => c.Names.Any(n => n == $"/{containerName}"));
+        Assert.NotNull(container);
+        Assert.Equal(expectedImage, container.Image);
+        await StopAndRemoveContainer(containerName).ConfigureAwait(false);
     }
 
     async Task StopAndRemoveContainer(string name)

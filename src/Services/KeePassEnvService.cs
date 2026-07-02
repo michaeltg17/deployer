@@ -35,18 +35,11 @@ internal sealed class KeePassEnvService(
         logger.LogEnvWritten(targetDir, project, environment);
     }
 
-    public async Task Cleanup(string targetDir)
+    public static async Task Cleanup(string targetDir)
     {
-        try
-        {
-            var envPath = Path.Combine(targetDir, ".env");
-            if (File.Exists(envPath))
-                File.Delete(envPath);
-        }
-        catch (Exception ex)
-        {
-            logger.LogEnvCleanupFailed(targetDir, ex);
-        }
+        var envPath = Path.Combine(targetDir, ".env");
+        if (File.Exists(envPath))
+            File.Delete(envPath);
     }
 
     private async Task<string> ExtractAttachment(string project, string attachmentName)
