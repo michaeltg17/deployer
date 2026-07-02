@@ -20,7 +20,8 @@ echo "Build successful"
 # Step 3: Tests
 echo ""
 echo "[3/3] Running tests..."
-dotnet test Deployer.slnx --no-build --verbosity normal
+mkdir -p test-results
+dotnet test Deployer.slnx --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory "test-results"
 echo "Tests passed"
 
 echo ""
