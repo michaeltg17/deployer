@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Tests;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "Tests public")]
-public sealed class RealDockerTestClass : WebApplicationFactory<Program>
+public sealed class RealDockerTestClass : WebApplicationFactory<Program>, IAsyncDisposable
 {
     public string TestProjectsDir { get; }
     private readonly string testKdbxPath;
@@ -27,7 +27,7 @@ public sealed class RealDockerTestClass : WebApplicationFactory<Program>
         var config = new DockerClientConfiguration();
         dockerClient = config.CreateClient();
         config.Dispose();
-        CleanupTestContainers();
+        CleanupTestContainers().Wait();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -55,28 +55,37 @@ public sealed class RealDockerTestClass : WebApplicationFactory<Program>
         });
     }
 
-    private void CleanupTestContainers()
+    private async Task CleanupTestContainers()
     {
         try
         {
-            var containers = dockerClient.Containers.ListContainersAsync(
-                new ContainersListParameters { All = true }).Result;
-            var testContainers = containers.Where(c => c.Names.Any(n => n.StartsWith("/deployer-test-", StringComparison.Ordinal))).ToList();
+            var containers = await dockerClient.Containers.ListContainersAsync(
+                new ContainersListParameters { All = true }).ConfigureAwait(false);
+            var testContainers = containers
+                .Where(c => c.Names.Any(n => n.StartsWith("/deployer-test-", StringComparison.Ordinal)))
+                .ToList();
 
             foreach (var container in testContainers)
             {
                 if (container.State == "running")
                 {
-                    dockerClient.Containers.StopContainerAsync(container.ID,
-                        new ContainerStopParameters()).Wait();
+                    await dockerClient.Containers.StopContainerAsync(container.ID,
+                        new ContainerStopParameters()).ConfigureAwait(false);
                 }
-                dockerClient.Containers.RemoveContainerAsync(container.ID,
-                    new ContainerRemoveParameters { Force = true }).Wait();
+                await dockerClient.Containers.RemoveContainerAsync(container.ID,
+                    new ContainerRemoveParameters { Force = true }).ConfigureAwait(false);
             }
         }
         catch
         {
             // Ignore cleanup errors, containers may not exist
         }
+    }
+
+    public async override ValueTask DisposeAsync()
+    {
+        await CleanupTestContainers().ConfigureAwait(false);
+        dockerClient.Dispose();
+        await base.DisposeAsync().ConfigureAwait(false);
     }
 }
