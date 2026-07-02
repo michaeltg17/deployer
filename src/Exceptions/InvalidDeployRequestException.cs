@@ -1,8 +1,5 @@
 namespace Api.Exceptions;
 
-internal sealed class InvalidDeployRequestException : DeployerException
+internal sealed class InvalidDeployRequestException(string message) : DeployerException(message)
 {
-    public InvalidDeployRequestException() { }
-    public InvalidDeployRequestException(string message) : base(message) { }
-    public InvalidDeployRequestException(string message, Exception innerException) : base(message, innerException) { }
 }

@@ -3,3 +3,5 @@ root = true
 [*.cs]
 # CA1707: Underscores in identifiers - xUnit convention uses underscores for test names
 dotnet_diagnostic.CA1707.severity = none
+# CA1032: Standard exception constructors - unnecessary boilerplate for custom exceptions
+dotnet_diagnostic.CA1032.severity = none
