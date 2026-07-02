@@ -1,5 +1,8 @@
 root = true
 
+[*]
+end_of_line = lf
+
 [*.cs]
 # Make all style analyzers errors
 dotnet_analyzer_diagnostic.category-Style.severity = warning
