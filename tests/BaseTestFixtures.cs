@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Tests;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "Tests public")]
-public sealed class RealDockerTestClass : WebApplicationFactory<Program>, IAsyncDisposable
+public sealed class BaseTestFixtures : WebApplicationFactory<Program>, IAsyncDisposable
 {
     public string TestProjectsDir { get; }
     private readonly string testKdbxPath;
@@ -18,9 +18,9 @@ public sealed class RealDockerTestClass : WebApplicationFactory<Program>, IAsync
 
     public IDockerClient DockerClient => Services.GetRequiredService<IDockerClient>();
 
-    public RealDockerTestClass()
+    public BaseTestFixtures()
     {
-        var testRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(RealDockerTestClass).Assembly.Location)!, "..", "..", ".."));
+        var testRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(BaseTestFixtures).Assembly.Location)!, "..", "..", ".."));
         testKdbxPath = Path.Combine(testRoot, "test.kdbx");
         TestProjectsDir = Path.Combine(testRoot, "projects");
 
