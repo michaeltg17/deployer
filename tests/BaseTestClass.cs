@@ -83,6 +83,7 @@ public sealed class BaseTestClass : WebApplicationFactory<Program>
             It.IsAny<int>(),
             It.IsAny<string?>(),
             It.IsAny<Dictionary<string, string>>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProcessResult { ExitCode = 0, Stdout = "ENV_VAR=value\n", Stderr = "" });
 
@@ -92,6 +93,7 @@ public sealed class BaseTestClass : WebApplicationFactory<Program>
             It.IsAny<int>(),
             It.IsAny<string?>(),
             It.IsAny<Dictionary<string, string>>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProcessResult { ExitCode = 0, Stdout = "", Stderr = "" });
 

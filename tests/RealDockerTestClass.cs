@@ -41,7 +41,7 @@ public sealed class RealDockerTestClass : WebApplicationFactory<Program>, IAsync
             {
                 { nameof(DeployerSettings.ImageRepo), "ghcr.io/michaeltg17/deployer" },
                 { nameof(DeployerSettings.KeePassDbPath), testKdbxPath },
-                { nameof(DeployerSettings.KeePassDbPassword), "test-db-pass" },
+                { nameof(DeployerSettings.KeePassDbPassword), "test" },
                 { nameof(DeployerSettings.ProjectsDir), TestProjectsDir },
             });
         });
@@ -51,7 +51,7 @@ public sealed class RealDockerTestClass : WebApplicationFactory<Program>, IAsync
             var existing = services.FirstOrDefault(d => d.ServiceType == typeof(IProcessRunner));
             if (existing != null)
                 services.Remove(existing);
-            services.AddSingleton<IProcessRunner>(sp => new DelegatingProcessRunner(new ProcessRunner()));
+            services.AddSingleton<IProcessRunner>(sp => new ProcessRunner());
         });
     }
 

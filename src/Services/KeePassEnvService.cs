@@ -11,7 +11,7 @@ internal sealed class KeePassEnvService(
 {
     private readonly string dbPath = settings.Value.KeePassDbPath;
     private readonly string password = settings.Value.KeePassDbPassword;
-    private readonly string projectsGroup = "Projects";
+    private readonly string projectsGroup = "projects";
 
     public async Task<Dictionary<string, string>> ExtractEnvVariables(string project, string environment)
     {
@@ -51,8 +51,8 @@ internal sealed class KeePassEnvService(
 
     private async Task<string> ExtractAttachment(string project, string attachmentName)
     {
-        var arguments = $"--password \"{password}\" attachment-export --stdout \"{dbPath}\" \"{projectsGroup}/{project}\" \"{attachmentName}\"";
-        var result = await processRunner.Run("keepassxc-cli", arguments, 30_000).ConfigureAwait(false);
+        var arguments = $"attachment-export --stdout \"{dbPath}\" \"{projectsGroup}/{project}\" \"{attachmentName}\"";
+        var result = await processRunner.Run("keepassxc-cli", arguments, 30_000, stdinInput: $"{password}\n").ConfigureAwait(false);
 
         if (result.ExitCode != 0)
         {

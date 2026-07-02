@@ -54,6 +54,13 @@ public sealed class RealDockerTests : IClassFixture<RealDockerTestClass>
         var container = containers.FirstOrDefault(c => c.Names.Any(n => n == $"/{containerName}"));
         Assert.NotNull(container);
         Assert.Equal(expectedImage, container.Image);
+
+        var inspect = await dockerClient.Containers.InspectContainerAsync(container.ID).ConfigureAwait(false);
+        Assert.NotNull(inspect.Config.Env);
+        Assert.True(inspect.Config.Env!.Any(e => e == "COMMON=COMMON_VALUE"),
+            $"COMMON=COMMON_VALUE not found in container environment. Env: {string.Join(", ", inspect.Config.Env ?? Array.Empty<string>())}");
+        Assert.True(inspect.Config.Env!.Any(e => e == "SECRET=SECRET_DEV"),
+            $"SECRET=SECRET_DEV not found in container environment. Env: {string.Join(", ", inspect.Config.Env ?? Array.Empty<string>())}");
         await StopAndRemoveContainer(containerName).ConfigureAwait(false);
     }
 

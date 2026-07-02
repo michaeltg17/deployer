@@ -4,3 +4,6 @@ services:
     container_name: deployer-test-${TAG}
     labels:
       - test.deployer.project=test-project
+    environment:
+      - COMMON=${COMMON}
+      - SECRET=${SECRET}

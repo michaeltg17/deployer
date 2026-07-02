@@ -10,5 +10,6 @@ internal interface IProcessRunner
         int timeoutMs,
         string? workingDirectory = null,
         Dictionary<string, string>? environmentVariables = null,
+        string? stdinInput = null,
         CancellationToken cancellationToken = default);
 }

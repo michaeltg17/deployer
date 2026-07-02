@@ -10,7 +10,8 @@ internal sealed class ProcessRunner : IProcessRunner
         string arguments,
         int timeoutMs,
         string? workingDirectory = null,
-        Dictionary<string, string>? environmentVariables = null,
+        Dictionary<string, string>? processEnv = null,
+        string? stdinInput = null,
         CancellationToken cancellationToken = default)
     {
         var psi = new ProcessStartInfo
@@ -19,6 +20,7 @@ internal sealed class ProcessRunner : IProcessRunner
             Arguments = arguments,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = stdinInput != null,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -26,9 +28,9 @@ internal sealed class ProcessRunner : IProcessRunner
         if (workingDirectory != null)
             psi.WorkingDirectory = workingDirectory;
 
-        if (environmentVariables != null)
+        if (processEnv != null)
         {
-            foreach (var (key, value) in environmentVariables)
+            foreach (var (key, value) in processEnv)
                 psi.EnvironmentVariables[key] = value;
         }
 
@@ -37,6 +39,12 @@ internal sealed class ProcessRunner : IProcessRunner
 
         var stdoutTask = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
         var stderrTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
+
+        if (stdinInput != null)
+        {
+            await process.StandardInput.WriteAsync(stdinInput.AsMemory(), cancellationToken).ConfigureAwait(false);
+            await process.StandardInput.FlushAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 

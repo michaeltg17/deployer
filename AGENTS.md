@@ -46,9 +46,9 @@
 │   │   └── launchSettings.json
 │   ├── Services/
 │   │   ├── DeploymentService.cs    # validate → extract env → pull image → compose up → cleanup
-│   │   ├── IProcessRunner.cs       # interface for process execution
-│   │   ├── KeePassEnvService.cs    # keepassxc-cli attachment-export → .env files
-│   │   └── ProcessRunner.cs        # real implementation via ProcessStartInfo
+│   │   ├── IProcessRunner.cs       # interface for process execution (supports stdinInput)
+│   │   ├── KeePassEnvService.cs    # keepassxc-cli attachment-export → .env files (password via --no-password + stdin)
+│   │   └── ProcessRunner.cs        # real impl: ProcessStartInfo, stdin piping for stdinInput
 │   └── Validation/
 │       ├── DeployRequestValidator.cs    # request field validation
 │       └── DeployerSettingsValidator.cs # IValidateOptions for settings
@@ -58,7 +58,6 @@
     ├── Tests.cs                    # 7 mocked tests: validation, missing compose, success path
     ├── RealDockerTestClass.cs      # WebApplicationFactory for real Docker tests
     ├── RealDockerTests.cs          # 2 real Docker tests: deploys actual containers
-    ├── DelegatingProcessRunner.cs  # IProcessRunner wrapper: blocks keepassxc-cli, delegates
     ├── test.kdbx                   # KeePassXC 2 binary test database (used by RealDockerTests)
     └── projects/
         └── test-project/
@@ -104,7 +103,6 @@ dotnet test tests/Tests.csproj
     ├── Tests.cs                    # 7 mocked tests: validation, missing compose, success path
     ├── RealDockerTestClass.cs      # WebApplicationFactory for real Docker tests
     ├── RealDockerTests.cs          # 2 real Docker tests: deploys actual containers
-    ├── DelegatingProcessRunner.cs  # IProcessRunner wrapper: blocks keepassxc-cli, delegates
     ├── test.kdbx                   # KeePassXC 2 binary test database (used by RealDockerTests)
     └── projects/
         └── test-project/
@@ -124,14 +122,7 @@ dotnet test tests/Tests.csproj
 | `ValidRequest_Latest_Returns200_AndStartsContainer` | Deploys `test-project` with `tag: "latest"`, verifies 200 + `docker inspect --format '{{.Config.Image}}'` confirms `ghcr.io/michaeltg17/deployer:latest` |
 | `ValidRequest_CommitTag_Returns200_AndStartsContainer` | Deploys `test-project` with `tag: "21ec91a"`, verifies 200 + correct image tag |
 
-`RealDockerTestClass` points `TestProjectsDir` at `tests/projects/` (the pre-existing test fixture compose files), uses real Docker.DotNet client, and replaces `IProcessRunner` with `DelegatingProcessRunner` (`keepassxc-cli` blocked, `docker` delegated to real `ProcessRunner`). `KeePassEnvService` tolerates failed CLI calls (empty `.env` is acceptable for tests).
-
-### KeePass CLI Mocking
-
-There are two levels of KeePass mocking:
-
-- **BaseTestClass** (mocked tests): Full Moq mock — every `keepassxc-cli` and `docker` call returns `ExitCode = 0`, with `"ENV_VAR=value\n"` as stdout for `keepassxc-cli`
-- **RealDockerTests**: `DelegatingProcessRunner` short-circuits `keepassxc-cli` with `ExitCode = 1` and stderr `"keepassxc-cli not found"`, delegates all other commands to real `ProcessRunner`
+`RealDockerTestClass` points `TestProjectsDir` at `tests/projects/` (the pre-existing test fixture compose files), uses real Docker.DotNet client, and replaces `IProcessRunner` with real `ProcessRunner`. All commands (`keepassxc-cli`, `docker`) execute against the real Docker daemon and real KeePassXC database (`test.kdbx`). `ProcessRunner` pipes stdin directly to processes for password input.
 
 ## Coding Conventions
 
