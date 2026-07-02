@@ -8,7 +8,7 @@ internal static class DeployEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/", async (
+        endpoints.MapPost("/", static async (
             [FromBody] DeployRequest request,
             [FromServices] DeploymentService deployService) =>
         {

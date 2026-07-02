@@ -10,7 +10,7 @@ internal static class ExceptionHandlerExtensions
 {
     public static WebApplication UseCustomExceptionHandler(this WebApplication app)
     {
-        app.UseExceptionHandler(config => config.Run(async httpContext =>
+        app.UseExceptionHandler(static config => config.Run(static async httpContext =>
         {
             httpContext.Response.ContentType = "application/problem+json";
             var problemDetailsService = httpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
