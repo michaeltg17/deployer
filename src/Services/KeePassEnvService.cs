@@ -1,4 +1,3 @@
-using System.Text;
 using Api.Logging;
 using Api.Models;
 using Microsoft.Extensions.Options;
@@ -14,32 +13,40 @@ internal sealed class KeePassEnvService(
     private readonly string password = settings.Value.KeePassDbPassword!;
     private readonly string projectsGroup = "Projects";
 
-    public async Task WriteEnvFiles(string targetDir, string project, string environment)
+    public async Task<Dictionary<string, string>> ExtractEnvVariables(string project, string environment)
     {
-        var sb = new StringBuilder();
+        var vars = new Dictionary<string, string>(StringComparer.Ordinal);
 
         var common = await ExtractAttachment(project, ".env").ConfigureAwait(false);
         if (!string.IsNullOrEmpty(common))
-        {
-            sb.Append(common);
-            if (!common.EndsWith('\n'))
-                sb.AppendLine();
-        }
+            ParseEnvContent(common, vars);
 
         var envSpecific = await ExtractAttachment(project, $".env.{environment}").ConfigureAwait(false);
         if (!string.IsNullOrEmpty(envSpecific))
-            sb.Append(envSpecific);
+            ParseEnvContent(envSpecific, vars);
 
-        var envPath = Path.Combine(targetDir, ".env");
-        await File.WriteAllTextAsync(envPath, sb.ToString()).ConfigureAwait(false);
-        logger.LogEnvWritten(targetDir, project, environment);
+        logger.LogEnvExtracted(project, environment, vars.Count);
+        return vars;
     }
 
-    public static async Task Cleanup(string targetDir)
+    private static void ParseEnvContent(string content, Dictionary<string, string> vars)
     {
-        var envPath = Path.Combine(targetDir, ".env");
-        if (File.Exists(envPath))
-            File.Delete(envPath);
+        foreach (var line in content.Split('\n'))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+                continue;
+
+            var equalsIndex = trimmed.IndexOf('=', StringComparison.Ordinal);
+            if (equalsIndex <= 0)
+                continue;
+
+            var key = trimmed.Substring(0, equalsIndex).Trim();
+            var value = trimmed.Substring(equalsIndex + 1).Trim();
+
+            if (key.Length > 0)
+                vars[key] = value;
+        }
     }
 
     private async Task<string> ExtractAttachment(string project, string attachmentName)

@@ -29,15 +29,12 @@ internal sealed class DeploymentService(
             throw new InvalidDeployRequestException($"Docker compose file not found for project '{request.Project}': {composeFile}");
 
         var image = $"{deployerSettings.ImageRepo}:{request.Tag}";
-        var tempDir = Path.Combine(Path.GetTempPath(), $"deploy-{request.Project}-{request.Environment}-{Guid.NewGuid():N}");
 
         logger.LogDeploying(image, request.Project!, request.Environment!);
 
-        Directory.CreateDirectory(tempDir);
-        File.Copy(composeFile, Path.Combine(tempDir, "docker-compose.yml"));
-
         logger.LogExtractingEnv(request.Project!, request.Environment!);
-        await keepassEnvService.WriteEnvFiles(tempDir, request.Project!, request.Environment!).ConfigureAwait(false);
+        var envVars = await keepassEnvService.ExtractEnvVariables(request.Project!, request.Environment!).ConfigureAwait(false);
+        envVars["TAG"] = request.Tag!;
 
         logger.LogPullingImage(image);
         await dockerClient.Images.CreateImageAsync(
@@ -46,9 +43,8 @@ internal sealed class DeploymentService(
             new Progress<JSONMessage>()).ConfigureAwait(false);
         logger.LogImagePulled();
 
-        var tempComposeFile = Path.Combine(tempDir, "docker-compose.yml");
-        logger.LogRunningCompose(tempDir);
-        var composeResult = await RunComposeUp(tempComposeFile, request.Tag!).ConfigureAwait(false);
+        logger.LogRunningCompose(composeFile);
+        var composeResult = await RunComposeUp(composeFile, envVars).ConfigureAwait(false);
         if (composeResult.ExitCode != 0)
         {
             logger.LogComposeFailed(composeResult.Stderr);
@@ -56,14 +52,12 @@ internal sealed class DeploymentService(
         }
 
         logger.LogDeploySuccess(request.Tag!, request.Project!, request.Environment!);
-        await KeePassEnvService.Cleanup(tempDir).ConfigureAwait(false);
-        Directory.Delete(tempDir, true);
     }
 
-    private async Task<ProcessResult> RunComposeUp(string composeFile, string tag)
+    private async Task<ProcessResult> RunComposeUp(string composeFile, Dictionary<string, string> envVars)
     {
         var arguments = $"compose -f \"{composeFile}\" up -d --force-recreate";
         var workingDir = Path.GetDirectoryName(composeFile) ?? ".";
-        return await processRunner.Run("docker", arguments, 300_000, workingDir, new Dictionary<string, string> { ["TAG"] = tag }).ConfigureAwait(false);
+        return await processRunner.Run("docker", arguments, 300_000, workingDir, envVars).ConfigureAwait(false);
     }
 }

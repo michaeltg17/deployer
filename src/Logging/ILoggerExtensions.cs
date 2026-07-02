@@ -15,8 +15,8 @@ internal static partial class ILoggerExtensions
     [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "Image pulled successfully.")]
     public static partial void LogImagePulled(this ILogger logger);
 
-    [LoggerMessage(EventId = 5, Level = LogLevel.Information, Message = "Running docker compose in {tempDir}.")]
-    public static partial void LogRunningCompose(this ILogger logger, string tempDir);
+    [LoggerMessage(EventId = 5, Level = LogLevel.Information, Message = "Running docker compose for {composeFile}.")]
+    public static partial void LogRunningCompose(this ILogger logger, string composeFile);
 
     [LoggerMessage(EventId = 6, Level = LogLevel.Information, Message = "Successfully deployed tag {tag} to {project}/{environment}.")]
     public static partial void LogDeploySuccess(this ILogger logger, string tag, string project, string environment);
@@ -24,15 +24,9 @@ internal static partial class ILoggerExtensions
     [LoggerMessage(EventId = 7, Level = LogLevel.Error, Message = "Compose up failed: {stderr}.")]
     public static partial void LogComposeFailed(this ILogger logger, string stderr);
 
-    [LoggerMessage(EventId = 8, Level = LogLevel.Warning, Message = "Failed to remove temp dir {tempDir}.")]
-    public static partial void LogTempDirCleanupFailed(this ILogger logger, string tempDir, Exception ex);
-
     // KeePassEnvService
-    [LoggerMessage(EventId = 9, Level = LogLevel.Information, Message = "Wrote .env to {targetDir} for {project}/{environment}.")]
-    public static partial void LogEnvWritten(this ILogger logger, string targetDir, string project, string environment);
-
-    [LoggerMessage(EventId = 10, Level = LogLevel.Warning, Message = "Failed to cleanup .env from {path}.")]
-    public static partial void LogEnvCleanupFailed(this ILogger logger, string path, Exception ex);
+    [LoggerMessage(EventId = 9, Level = LogLevel.Information, Message = "Extracted {count} environment variables for {project}/{environment}.")]
+    public static partial void LogEnvExtracted(this ILogger logger, string project, string environment, int count);
 
     [LoggerMessage(EventId = 11, Level = LogLevel.Warning, Message = "keepassxc-cli exit={exitCode} for {group}/{entry}/{attachment}: {stderr}.")]
     public static partial void LogKeePassCliFailed(this ILogger logger, int exitCode, string group, string entry, string attachment, string stderr);
